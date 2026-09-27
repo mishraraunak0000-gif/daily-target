@@ -1,644 +1,748 @@
-// ============================================
-// DAILY TARGET APP
-// ============================================
-
-const STORAGE_KEY = "dailyTargetApp_v1";
-
-let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
-  fixedTarget: {
-    name: "",
-    time: "",
-    completed: false
-  },
-
-  dailyTarget: {
-    name: "",
-    time: "",
-    completed: false,
-    date: ""
-  },
-
-  streak: 0,
-  bestStreak: 0,
-  activeDays: 0,
-  completedDays: {},
-  reminder: null
-};
-
-let editingType = null;
-let reminderTimer = null;
-
-
-// ============================================
-// DATE FUNCTIONS
-// ============================================
-
-function getTodayKey() {
-  const d = new Date();
-
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-function formatDate() {
-  return new Date().toLocaleDateString("en-IN", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric"
-  });
+:root {
+  --bg: #f5f7fb;
+  --card: #ffffff;
+  --text: #172033;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --primary: #4f46e5;
+  --primary-dark: #3730a3;
+  --green: #16a34a;
+  --orange: #f59e0b;
+  --red: #dc2626;
+  --shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
 }
 
-
-// ============================================
-// SAVE DATA
-// ============================================
-
-function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
 }
 
+button,
+input {
+  font: inherit;
+}
 
-// ============================================
-// RESET DAILY STATUS
-// ============================================
+button {
+  cursor: pointer;
+}
 
-function checkNewDay() {
-  const today = getTodayKey();
+.app {
+  width: 100%;
+  max-width: 850px;
+  margin: auto;
+  padding: 20px;
+}
 
-  if (data.dailyTarget.date !== today) {
-    data.dailyTarget.completed = false;
-    data.dailyTarget.date = today;
-    data.fixedTarget.completed = false;
+/* HEADER */
 
-    save();
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--primary);
+  letter-spacing: 1.5px;
+  margin-bottom: 5px;
+}
+
+header h1 {
+  font-size: 30px;
+  margin-bottom: 5px;
+}
+
+#todayDate {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.streak {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  padding: 10px 15px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  min-width: 90px;
+}
+
+.streak span {
+  font-size: 20px;
+}
+
+.streak strong {
+  display: block;
+  font-size: 22px;
+}
+
+.streak small {
+  color: var(--muted);
+}
+
+/* GENERAL CARDS */
+
+.progress-card,
+.target-card,
+.timer-card,
+.summary-card,
+.weekly-card,
+.history-card,
+.settings-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow);
+}
+
+/* PROGRESS */
+
+.progress-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.progress-top span {
+  font-weight: bold;
+}
+
+#progressPercent {
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+#progressFill {
+  height: 100%;
+  width: 0%;
+  background: var(--primary);
+  border-radius: 20px;
+  transition: width 0.3s ease;
+}
+
+#progressText {
+  margin-top: 8px;
+  display: block;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* TARGET CARDS */
+
+.card-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 15px;
+}
+
+.icon {
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef2ff;
+  border-radius: 12px;
+  font-size: 23px;
+}
+
+.label {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.target-card h2 {
+  margin-top: 3px;
+  font-size: 20px;
+}
+
+.target-info {
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.status {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 20px;
+  background: #f3f4f6;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 15px;
+}
+
+.status.completed {
+  background: #dcfce7;
+  color: var(--green);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.complete-btn,
+.secondary-btn,
+.save-btn,
+.add-btn,
+.notification-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 15px;
+  font-weight: bold;
+}
+
+.complete-btn {
+  background: var(--green);
+  color: white;
+}
+
+.secondary-btn {
+  background: #eef2f7;
+  color: var(--text);
+}
+
+.save-btn,
+.add-btn {
+  background: var(--primary);
+  color: white;
+}
+
+.complete-btn:hover,
+.save-btn:hover,
+.add-btn:hover {
+  filter: brightness(0.95);
+}
+
+.complete-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* REGULAR TARGET */
+
+.task-progress {
+  margin: 10px 0 15px;
+}
+
+.task-progress-bar {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.task-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--green);
+  transition: width 0.3s ease;
+}
+
+.task-progress-text {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+/* STUDY TIMER */
+
+.timer-card h2 {
+  margin-bottom: 15px;
+}
+
+.timer-modes {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.timer-mode {
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 9px;
+}
+
+.timer-mode.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.timer-display {
+  text-align: center;
+  font-size: 45px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin: 15px 0;
+}
+
+.timer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.countdown-settings {
+  display: none;
+  margin-bottom: 15px;
+}
+
+.countdown-settings.show {
+  display: block;
+}
+
+.countdown-settings input,
+.manual-study input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  margin-top: 6px;
+}
+
+.manual-study {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.manual-study h3 {
+  margin-bottom: 8px;
+}
+
+.manual-study-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* SUMMARY */
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.summary-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  padding: 16px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.summary-box strong {
+  display: block;
+  font-size: 23px;
+  margin-bottom: 5px;
+}
+
+.summary-box span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* WEEKLY */
+
+.weekly-card h2 {
+  margin-bottom: 15px;
+}
+
+.weekly-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.weekly-stat {
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.weekly-stat strong {
+  display: block;
+  font-size: 20px;
+}
+
+.weekly-stat span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+#weeklyChart {
+  width: 100%;
+  min-height: 180px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 15px 5px 5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.chart-day {
+  flex: 1;
+  height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.chart-bar {
+  width: 70%;
+  max-width: 45px;
+  min-height: 3px;
+  background: var(--primary);
+  border-radius: 7px 7px 0 0;
+}
+
+.chart-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.chart-value {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* HISTORY */
+
+.history-card h2,
+.settings-card h2 {
+  margin-bottom: 15px;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-date {
+  font-weight: bold;
+}
+
+.history-info {
+  color: var(--muted);
+  font-size: 13px;
+  text-align: right;
+}
+
+/* SETTINGS */
+
+.settings-card p {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.notification-btn {
+  background: #eef2ff;
+  color: var(--primary-dark);
+}
+
+/* MODALS */
+
+.modal,
+.regular-planner,
+.task-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 15px;
+  z-index: 1000;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.modal-box,
+.planner-box,
+.task-modal-box {
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: white;
+  border-radius: 18px;
+  padding: 22px;
+  position: relative;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+}
+
+.modal-box h2,
+.planner-box h2,
+.task-modal-box h2 {
+  margin-bottom: 18px;
+}
+
+.close {
+  position: absolute;
+  right: 15px;
+  top: 12px;
+  border: none;
+  background: transparent;
+  font-size: 28px;
+  color: var(--muted);
+}
+
+.modal-box label,
+.task-modal-box label {
+  display: block;
+  margin: 12px 0 6px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.modal-box input,
+.task-modal-box input {
+  width: 100%;
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: none;
+}
+
+.modal-box input:focus,
+.task-modal-box input:focus {
+  border-color: var(--primary);
+}
+
+.modal-box .save-btn,
+.task-modal-box .save-btn {
+  width: 100%;
+  margin-top: 18px;
+}
+
+/* PLANNER */
+
+.planner-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+#plannerDate {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.regular-task {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.regular-task input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+}
+
+.regular-task-content {
+  flex: 1;
+}
+
+.regular-task-name {
+  font-weight: bold;
+}
+
+.regular-task-time {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.delete-task {
+  border: none;
+  background: transparent;
+  color: var(--red);
+  font-size: 18px;
+}
+
+.empty-tasks {
+  color: var(--muted);
+  text-align: center;
+  padding: 20px;
+}
+
+.planner-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.planner-actions button {
+  flex: 1;
+}
+
+/* REMINDER */
+
+.reminder {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 15px;
+}
+
+.reminder-box {
+  width: 100%;
+  max-width: 400px;
+  background: white;
+  border-radius: 20px;
+  padding: 25px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.alarm-icon {
+  font-size: 45px;
+  margin-bottom: 10px;
+}
+
+.reminder-box h2 {
+  margin-bottom: 10px;
+}
+
+#reminderText {
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+
+.reminder-box button {
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* MOBILE */
+
+@media (max-width: 650px) {
+  .app {
+    padding: 14px;
+  }
+
+  header h1 {
+    font-size: 25px;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .weekly-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .timer-display {
+    font-size: 38px;
+  }
+
+  .manual-study-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .manual-study-row button {
+    width: 100%;
+  }
+
+  .planner-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .history-item {
+    gap: 10px;
+  }
+
+  .history-info {
+    text-align: right;
   }
 }
 
+@media (max-width: 420px) {
+  header {
+    align-items: flex-start;
+  }
 
-// ============================================
-// DISPLAY
-// ============================================
+  .streak {
+    min-width: 75px;
+    padding: 8px;
+  }
 
-function updateUI() {
-  checkNewDay();
+  .target-card,
+  .progress-card,
+  .timer-card,
+  .weekly-card,
+  .history-card,
+  .settings-card {
+    padding: 16px;
+  }
 
-  document.getElementById("date").textContent = formatDate();
+  .weekly-stats {
+    gap: 7px;
+  }
 
-  document.getElementById("streak").textContent = data.streak;
-  document.getElementById("bestStreak").textContent = data.bestStreak;
-  document.getElementById("totalDays").textContent = data.activeDays;
-
-  // Daily target
-  document.getElementById("dailyTargetName").textContent =
-    data.dailyTarget.name || "No target set";
-
-  document.getElementById("dailyTargetTime").textContent =
-    data.dailyTarget.time
-      ? formatTime(data.dailyTarget.time)
-      : "No time set";
-
-  // Fixed target
-  document.getElementById("fixedTargetName").textContent =
-    data.fixedTarget.name || "No fixed target set";
-
-  document.getElementById("fixedTargetTime").textContent =
-    data.fixedTarget.time
-      ? formatTime(data.fixedTarget.time)
-      : "No time set";
-
-  updateStatus(
-    "dailyStatus",
-    data.dailyTarget.completed
-  );
-
-  updateStatus(
-    "fixedStatus",
-    data.fixedTarget.completed
-  );
-
-  updateProgress();
-  updateHistory();
-}
-
-
-function updateStatus(id, completed) {
-  const element = document.getElementById(id);
-
-  if (completed) {
-    element.textContent = "✓ Completed";
-    element.classList.add("done");
-  } else {
-    element.textContent = "Incomplete";
-    element.classList.remove("done");
+  .weekly-stat {
+    padding: 10px 5px;
   }
 }
-
-
-function formatTime(time) {
-  if (!time) return "No time set";
-
-  const [hours, minutes] = time.split(":");
-
-  const date = new Date();
-  date.setHours(hours, minutes);
-
-  return date.toLocaleTimeString("en-IN", {
-    hour: "numeric",
-    minute: "2-digit"
-  });
-}
-
-
-// ============================================
-// PROGRESS
-// ============================================
-
-function updateProgress() {
-  let total = 0;
-  let completed = 0;
-
-  if (data.dailyTarget.name) {
-    total++;
-    if (data.dailyTarget.completed) completed++;
-  }
-
-  if (data.fixedTarget.name) {
-    total++;
-    if (data.fixedTarget.completed) completed++;
-  }
-
-  const percentage =
-    total === 0
-      ? 0
-      : Math.round((completed / total) * 100);
-
-  document.getElementById("progressText").textContent =
-    `${percentage}%`;
-
-  document.getElementById("progressFill").style.width =
-    `${percentage}%`;
-
-  document.getElementById("completedCount").textContent =
-    completed;
-}
-
-
-// ============================================
-// MODAL
-// ============================================
-
-function openModal(type) {
-  editingType = type;
-
-  const target =
-    type === "daily"
-      ? data.dailyTarget
-      : data.fixedTarget;
-
-  document.getElementById("modalTitle").textContent =
-    type === "daily"
-      ? "Set Today's Target"
-      : "Set Fixed Target";
-
-  document.getElementById("targetInput").value =
-    target.name || "";
-
-  document.getElementById("timeInput").value =
-    target.time || "";
-
-  document.getElementById("modal").classList.remove("hidden");
-
-  document.getElementById("targetInput").focus();
-}
-
-
-function closeModal() {
-  document.getElementById("modal").classList.add("hidden");
-  editingType = null;
-}
-
-
-function saveTarget() {
-  const name =
-    document.getElementById("targetInput").value.trim();
-
-  const time =
-    document.getElementById("timeInput").value;
-
-  if (!name) {
-    alert("Please enter a target.");
-    return;
-  }
-
-  if (!time) {
-    alert("Please select a time.");
-    return;
-  }
-
-  if (editingType === "daily") {
-    data.dailyTarget.name = name;
-    data.dailyTarget.time = time;
-    data.dailyTarget.completed = false;
-    data.dailyTarget.date = getTodayKey();
-  }
-
-  if (editingType === "fixed") {
-    data.fixedTarget.name = name;
-    data.fixedTarget.time = time;
-    data.fixedTarget.completed = false;
-  }
-
-  save();
-  closeModal();
-  updateUI();
-}
-
-
-// ============================================
-// COMPLETE TARGET
-// ============================================
-
-function completeTarget(type) {
-  const target =
-    type === "daily"
-      ? data.dailyTarget
-      : data.fixedTarget;
-
-  if (!target.name) {
-    alert("Set a target first.");
-    return;
-  }
-
-  if (target.completed) return;
-
-  target.completed = true;
-
-  checkIfDayCompleted();
-
-  save();
-  updateUI();
-
-  stopReminder();
-}
-
-
-function checkIfDayCompleted() {
-  const dailyExists = Boolean(data.dailyTarget.name);
-  const fixedExists = Boolean(data.fixedTarget.name);
-
-  const dailyDone =
-    !dailyExists || data.dailyTarget.completed;
-
-  const fixedDone =
-    !fixedExists || data.fixedTarget.completed;
-
-  if (dailyDone && fixedDone && (dailyExists || fixedExists)) {
-
-    const today = getTodayKey();
-
-    if (!data.completedDays[today]) {
-      data.completedDays[today] = true;
-      data.activeDays++;
-
-      updateStreak();
-    }
-  }
-}
-
-
-// ============================================
-// STREAK
-// ============================================
-
-function updateStreak() {
-  let streak = 0;
-
-  const date = new Date();
-
-  while (true) {
-    const key =
-      date.getFullYear() +
-      "-" +
-      String(date.getMonth() + 1).padStart(2, "0") +
-      "-" +
-      String(date.getDate()).padStart(2, "0");
-
-    if (data.completedDays[key]) {
-      streak++;
-      date.setDate(date.getDate() - 1);
-    } else {
-      break;
-    }
-  }
-
-  data.streak = streak;
-
-  if (streak > data.bestStreak) {
-    data.bestStreak = streak;
-  }
-}
-
-
-// ============================================
-// HISTORY
-// ============================================
-
-function updateHistory() {
-  const container = document.getElementById("history");
-
-  container.innerHTML = "";
-
-  for (let i = 0; i < 7; i++) {
-
-    const date = new Date();
-
-    date.setDate(date.getDate() - i);
-
-    const key =
-      date.getFullYear() +
-      "-" +
-      String(date.getMonth() + 1).padStart(2, "0") +
-      "-" +
-      String(date.getDate()).padStart(2, "0");
-
-    const label =
-      i === 0
-        ? "Today"
-        : date.toLocaleDateString("en-IN", {
-            weekday: "short",
-            day: "numeric",
-            month: "short"
-          });
-
-    const row = document.createElement("div");
-
-    row.className = "history-row";
-
-    row.innerHTML = `
-      <span class="history-day">${label}</span>
-      <span class="history-status">
-        ${data.completedDays[key] ? "✅" : "—"}
-      </span>
-    `;
-
-    container.appendChild(row);
-  }
-}
-
-
-// ============================================
-// REMINDER SYSTEM
-// ============================================
-
-function checkTargetTimes() {
-  const now = new Date();
-
-  const currentHours =
-    String(now.getHours()).padStart(2, "0");
-
-  const currentMinutes =
-    String(now.getMinutes()).padStart(2, "0");
-
-  const currentTime =
-    `${currentHours}:${currentMinutes}`;
-
-  if (
-    data.dailyTarget.name &&
-    data.dailyTarget.time === currentTime &&
-    !data.dailyTarget.completed
-  ) {
-    showReminder(
-      "daily",
-      data.dailyTarget.name
-    );
-  }
-
-  if (
-    data.fixedTarget.name &&
-    data.fixedTarget.time === currentTime &&
-    !data.fixedTarget.completed
-  ) {
-    showReminder(
-      "fixed",
-      data.fixedTarget.name
-    );
-  }
-}
-
-
-function showReminder(type, targetName) {
-
-  if (reminderTimer) {
-    clearTimeout(reminderTimer);
-  }
-
-  data.reminder = {
-    type: type
-  };
-
-  document.getElementById("reminderText").textContent =
-    `"${targetName}" is still incomplete.`;
-
-  document.getElementById("reminder")
-    .classList.remove("hidden");
-
-  playAlarm();
-
-  sendNotification(
-    "Target Reminder",
-    `${targetName} is still incomplete.`
-  );
-
-  save();
-
-  // Repeat after one hour
-  reminderTimer = setTimeout(() => {
-
-    const target =
-      type === "daily"
-        ? data.dailyTarget
-        : data.fixedTarget;
-
-    if (!target.completed) {
-      showReminder(type, target.name);
-    }
-
-  }, 60 * 60 * 1000);
-}
-
-
-function stopReminder() {
-
-  if (reminderTimer) {
-    clearTimeout(reminderTimer);
-    reminderTimer = null;
-  }
-
-  data.reminder = null;
-
-  document.getElementById("reminder")
-    .classList.add("hidden");
-
-  save();
-}
-
-
-function playAlarm() {
-  try {
-    const audioContext =
-      new (window.AudioContext ||
-        window.webkitAudioContext)();
-
-    const oscillator =
-      audioContext.createOscillator();
-
-    const gain =
-      audioContext.createGain();
-
-    oscillator.frequency.value = 800;
-
-    oscillator.connect(gain);
-    gain.connect(audioContext.destination);
-
-    oscillator.start();
-
-    gain.gain.setValueAtTime(
-      0.25,
-      audioContext.currentTime
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-      0.001,
-      audioContext.currentTime + 1
-    );
-
-    oscillator.stop(
-      audioContext.currentTime + 1
-    );
-
-  } catch (error) {
-    console.log("Audio unavailable.");
-  }
-}
-
-
-// ============================================
-// NOTIFICATIONS
-// ============================================
-
-async function enableNotifications() {
-
-  if (!("Notification" in window)) {
-    alert("Your browser does not support notifications.");
-    return;
-  }
-
-  const permission =
-    await Notification.requestPermission();
-
-  if (permission === "granted") {
-    document.getElementById("notificationBtn")
-      .textContent = "✓ Notifications Enabled";
-  } else {
-    alert("Notifications were not enabled.");
-  }
-}
-
-
-function sendNotification(title, body) {
-
-  if (
-    "Notification" in window &&
-    Notification.permission === "granted"
-  ) {
-    new Notification(title, {
-      body: body
-    });
-  }
-}
-
-
-// ============================================
-// BUTTONS
-// ============================================
-
-document.getElementById("editDaily")
-  .addEventListener("click", () => {
-    openModal("daily");
-  });
-
-document.getElementById("editFixed")
-  .addEventListener("click", () => {
-    openModal("fixed");
-  });
-
-document.getElementById("saveTarget")
-  .addEventListener("click", saveTarget);
-
-document.getElementById("closeModal")
-  .addEventListener("click", closeModal);
-
-document.getElementById("dailyComplete")
-  .addEventListener("click", () => {
-    completeTarget("daily");
-  });
-
-document.getElementById("fixedComplete")
-  .addEventListener("click", () => {
-    completeTarget("fixed");
-  });
-
-document.getElementById("reminderComplete")
-  .addEventListener("click", () => {
-
-    if (!data.reminder) return;
-
-    completeTarget(data.reminder.type);
-  });
-
-document.getElementById("remindLater")
-  .addEventListener("click", () => {
-
-    document.getElementById("reminder")
-      .classList.add("hidden");
-
-    if (data.reminder) {
-
-      const type = data.reminder.type;
-
-      reminderTimer = setTimeout(() => {
-
-        const target =
-          type === "daily"
-            ? data.dailyTarget
-            : data.fixedTarget;
-
-        if (!target.completed) {
-          showReminder(type, target.name);
-        }
-
-      }, 60 * 60 * 1000);
-    }
-  });
-
-document.getElementById("notificationBtn")
-  .addEventListener("click", enableNotifications);
-
-
-// ============================================
-// START APP
-// ============================================
-
-checkNewDay();
-updateUI();
-
-// Check the clock every 30 seconds
-setInterval(checkTargetTimes, 30000);
-
-// Update display every minute
-setInterval(updateUI, 60000);
-
