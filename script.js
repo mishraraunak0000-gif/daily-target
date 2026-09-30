@@ -1,125 +1,53 @@
-/* =========================================================
-   DAILY TARGET v2
-   Multi-task planner + Fixed Target + Study Timer
-   + Streak + Notifications + Weekly Statistics
-   ========================================================= */
+// =========================================================
+// DAILY TARGET — FINAL JAVASCRIPT
+// =========================================================
+
+const STORAGE_KEY = "dailyTargetApp_final_v1";
+const OLD_KEYS = [
+  "dailyTargetApp_v1",
+  "dailyTargetApp_v2"
+];
+
+const $ = (id) => document.getElementById(id);
 
 
-/* =========================
-   STORAGE
-   ========================= */
+// =========================================================
+// DATE / ID HELPERS
+// =========================================================
 
-const STORAGE_KEY = "dailyTargetApp_v2";
+function todayKey() {
+  const d = new Date();
 
-const defaultData = {
-  fixedTarget: {
-    name: "",
-    time: "",
-    completedDates: {}
-  },
-
-  tasks: [],
-
-  study: {
-    minutesByDate: {}
-  },
-
-  records: {},
-
-  bestStreak: 0,
-
-  notificationsEnabled: false
-};
-
-let data = loadData();
-
-
-function loadData() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-
-    if (!saved) {
-      return structuredClone(defaultData);
-    }
-
-    const parsed = JSON.parse(saved);
-
-    return {
-      ...structuredClone(defaultData),
-      ...parsed,
-      fixedTarget: {
-        ...defaultData.fixedTarget,
-        ...(parsed.fixedTarget || {})
-      },
-      study: {
-        ...defaultData.study,
-        ...(parsed.study || {})
-      },
-      tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
-      records: parsed.records || {}
-    };
-
-  } catch (error) {
-    console.error("Could not load data:", error);
-    return structuredClone(defaultData);
-  }
-}
-
-
-function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
-
-
-/* =========================
-   DATE & TIME HELPERS
-   ========================= */
-
-function getTodayKey() {
-  const now = new Date();
-
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-
-function getDateKey(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 
 function dateFromKey(key) {
-  const parts = key.split("-");
+  const [year, month, day] = key.split("-").map(Number);
 
-  return new Date(
-    Number(parts[0]),
-    Number(parts[1]) - 1,
-    Number(parts[2])
-  );
+  return new Date(year, month - 1, day);
 }
 
 
-function addDays(date, amount) {
-  const result = new Date(date);
-  result.setDate(result.getDate() + amount);
-  return result;
+function makeId(prefix = "id") {
+  return `${prefix}_${Date.now()}_${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
 }
 
 
-function formatDate(dateKey) {
-  if (!dateKey) return "";
+function formatDateLong(key = todayKey()) {
+  return dateFromKey(key).toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
+}
 
-  const date = dateFromKey(dateKey);
 
-  return date.toLocaleDateString("en-IN", {
+function formatDateShort(key) {
+  return dateFromKey(key).toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
     year: "numeric"
@@ -127,1586 +55,1007 @@ function formatDate(dateKey) {
 }
 
 
-function formatShortDate(dateKey) {
-  if (!dateKey) return "";
-
-  const date = dateFromKey(dateKey);
-
-  return date.toLocaleDateString("en-IN", {
+function dateLabel(key) {
+  return dateFromKey(key).toLocaleDateString("en-IN", {
+    weekday: "long",
     day: "numeric",
-    month: "short"
+    month: "long",
+    year: "numeric"
   });
 }
 
 
 function formatTime(time) {
-  if (!time) return "No time";
+  if (!time) return "No time set";
 
-  const [hours, minutes] = time.split(":");
+  const [hours, minutes] = time.split(":").map(Number);
 
-  const date = new Date();
+  const d = new Date();
 
-  date.setHours(Number(hours));
-  date.setMinutes(Number(minutes));
-  date.setSeconds(0);
+  d.setHours(hours, minutes, 0, 0);
 
-  return date.toLocaleTimeString("en-IN", {
+  return d.toLocaleTimeString("en-IN", {
     hour: "numeric",
     minute: "2-digit"
   });
 }
 
 
-function getDateTime(dateKey, time) {
-  if (!dateKey || !time) return null;
-
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const [hours, minutes] = time.split(":").map(Number);
-
-  return new Date(
-    year,
-    month - 1,
-    day,
-    hours,
-    minutes,
+function formatClock(milliseconds) {
+  const totalSeconds = Math.max(
     0,
-    0
+    Math.floor(milliseconds / 1000)
+  );
+
+  const hours = Math.floor(totalSeconds / 3600);
+
+  const minutes = Math.floor(
+    (totalSeconds % 3600) / 60
+  );
+
+  const seconds = totalSeconds % 60;
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+
+function formatMinutes(seconds) {
+  return `${Math.floor(Math.max(0, seconds) / 60)} min`;
+}
+
+
+function escapeHtml(value) {
+  return String(value).replace(
+    /[&<>'"]/g,
+    character => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "'": "&#39;",
+      '"': "&quot;"
+    }[character])
   );
 }
 
 
+// =========================================================
+// DATA
+// =========================================================
 
-/* =========================
-   DOM HELPERS
-   ========================= */
+function emptyData() {
+  return {
+    version: 1,
 
-function $(id) {
-  return document.getElementById(id);
-}
+    fixedTargets: [],
 
+    tasks: {},
 
-function show(element) {
-  if (element) {
-    element.classList.remove("hidden");
-  }
-}
+    studyByDate: {},
 
+    completedDays: {},
 
-function hide(element) {
-  if (element) {
-    element.classList.add("hidden");
-  }
-}
+    notified: {},
 
+    bestStreak: 0,
 
-
-/* =========================
-   INITIAL SETUP
-   ========================= */
-
-document.addEventListener("DOMContentLoaded", () => {
-
-  setupButtons();
-
-  checkNewDay();
-
-  updateAll();
-
-  startReminderChecker();
-
-  startTimerLoop();
-
-});
-
-
-
-/* =========================
-   NEW DAY / RECORD SYSTEM
-   ========================= */
-
-function checkNewDay() {
-
-  const today = getTodayKey();
-
-  if (!data.records[today]) {
-
-    data.records[today] = {
-      tasksTotal: 0,
-      tasksCompleted: 0,
-      fixedCompleted: false,
-      studyMinutes: 0,
-      completedDay: false
-    };
-
-    saveData();
-  }
-
-  updateRecordForToday();
-}
-
-
-function updateRecordForToday() {
-
-  const today = getTodayKey();
-
-  const todayTasks = data.tasks.filter(
-    task => task.date === today
-  );
-
-  const completedTasks = todayTasks.filter(
-    task => task.completed
-  );
-
-  const fixedCompleted =
-    data.fixedTarget.completedDates[today] === true;
-
-  const allTasksCompleted =
-    todayTasks.length > 0 &&
-    completedTasks.length === todayTasks.length;
-
-  const dayCompleted =
-    allTasksCompleted && fixedCompleted;
-
-  data.records[today] = {
-    tasksTotal: todayTasks.length,
-    tasksCompleted: completedTasks.length,
-    fixedCompleted: fixedCompleted,
-    studyMinutes: getStudyMinutes(today),
-    completedDay: dayCompleted
+    streak: 0
   };
-
-  saveData();
-
-  calculateStreak();
 }
 
 
+function normalizeTask(task, dateFallback = todayKey()) {
+  return {
+    id: task.id || makeId("task"),
 
-/* =========================
-   STREAK SYSTEM
-   ========================= */
+    name: String(
+      task.name ||
+      task.title ||
+      ""
+    ).trim(),
 
-/*
-   Rule:
-   - A completed day counts.
-   - One missed day between completed days does NOT break streak.
-   - Two consecutive missed days DO break streak.
-*/
+    date:
+      task.date ||
+      dateFallback,
 
+    time:
+      task.time ||
+      "",
 
-function calculateStreak() {
-
-  const today = getTodayKey();
-
-  let currentDate = dateFromKey(today);
-
-  /*
-    If today is not finished yet, start checking from yesterday.
-  */
-
-  let todayRecord = data.records[today];
-
-  if (!todayRecord || !todayRecord.completedDay) {
-    currentDate = addDays(currentDate, -1);
-  }
-
-  let streak = 0;
-  let missedDays = 0;
-
-  for (let i = 0; i < 3650; i++) {
-
-    const key = getDateKey(currentDate);
-    const record = data.records[key];
-
-    if (record && record.completedDay) {
-
-      streak++;
-      missedDays = 0;
-
-    } else {
-
-      missedDays++;
-
-      if (missedDays >= 2) {
-        break;
-      }
-    }
-
-    currentDate = addDays(currentDate, -1);
-  }
-
-  data.currentStreak = streak;
-
-  if (streak > (data.bestStreak || 0)) {
-    data.bestStreak = streak;
-  }
-
-  saveData();
+    completed:
+      Boolean(
+        task.completed ||
+        task.done
+      )
+  };
 }
 
 
-
-/* =========================
-   MAIN UI
-   ========================= */
-
-function updateAll() {
-
-  updateHeader();
-
-  updateRegularTarget();
-
-  updateFixedTarget();
-
-  updateStudyUI();
-
-  updateTodaySummary();
-
-  updateWeeklyStats();
-
-  updateHistory();
-
-  updateProgress();
-}
-
-
-
-/* =========================
-   HEADER
-   ========================= */
-
-function updateHeader() {
-
-  const today = getTodayKey();
-
-  if ($("todayDate")) {
-    $("todayDate").textContent =
-      new Date().toLocaleDateString("en-IN", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric"
-      });
-  }
-
-  if ($("bestStreak")) {
-    $("bestStreak").textContent =
-      data.bestStreak || 0;
-  }
-}
-
-
-
-/* =========================
-   REGULAR TARGET
-   ========================= */
-
-function updateRegularTarget() {
-
-  const today = getTodayKey();
-
-  const tasks = data.tasks.filter(
-    task => task.date === today
-  );
-
-  const completed = tasks.filter(
-    task => task.completed
-  );
-
-  if ($("dailyTargetName")) {
-
-    if (tasks.length === 0) {
-      $("dailyTargetName").textContent =
-        "No tasks planned";
-    } else {
-      $("dailyTargetName").textContent =
-        `${tasks.length} task${tasks.length === 1 ? "" : "s"} planned`;
-    }
-  }
-
-
-  if ($("dailyTargetTime")) {
-
-    if (tasks.length === 0) {
-      $("dailyTargetTime").textContent =
-        "Tap + to add tasks";
-    } else {
-
-      const sorted = [...tasks].sort(
-        (a, b) => a.time.localeCompare(b.time)
-      );
-
-      const firstTime = sorted[0].time;
-
-      $("dailyTargetTime").textContent =
-        `First task: ${formatTime(firstTime)}`;
-    }
-  }
-
-
-  if ($("regularTargetProgress")) {
-    $("regularTargetProgress").textContent =
-      `${completed.length} / ${tasks.length} completed`;
-  }
-
-
-  if ($("dailyStatus")) {
-
-    if (tasks.length === 0) {
-
-      $("dailyStatus").textContent =
-        "No tasks added for today.";
-
-    } else if (completed.length === tasks.length) {
-
-      $("dailyStatus").textContent =
-        "✓ All tasks completed";
-
-    } else {
-
-      $("dailyStatus").textContent =
-        `${tasks.length - completed.length} task${
-          tasks.length - completed.length === 1 ? "" : "s"
-        } remaining`;
-    }
-  }
-
-
-  if ($("dailyComplete")) {
-
-    $("dailyComplete").textContent =
-      tasks.length > 0 && completed.length === tasks.length
-        ? "All Completed"
-        : "Complete All";
-  }
-
-
-  renderTodayTaskPreview();
-}
-
-
-function renderTodayTaskPreview() {
-
-  const container = $("regularTargetCard");
-
-  if (!container) return;
-
-  let oldPreview = container.querySelector(
-    ".today-task-preview"
-  );
-
-  if (oldPreview) {
-    oldPreview.remove();
-  }
-
-  const today = getTodayKey();
-
-  const tasks = data.tasks
-    .filter(task => task.date === today)
-    .sort((a, b) => a.time.localeCompare(b.time));
-
-  if (tasks.length === 0) return;
-
-  const preview = document.createElement("div");
-
-  preview.className = "today-task-preview";
-
-  tasks.slice(0, 3).forEach(task => {
-
-    const row = document.createElement("div");
-
-    row.className = "task-preview-row";
-
-    row.innerHTML = `
-      <span class="task-preview-check">
-        ${task.completed ? "✓" : "○"}
-      </span>
-
-      <span class="task-preview-name">
-        ${escapeHTML(task.name)}
-      </span>
-
-      <span class="task-preview-time">
-        ${formatTime(task.time)}
-      </span>
-    `;
-
-    preview.appendChild(row);
-  });
-
-
-  if (tasks.length > 3) {
-
-    const more = document.createElement("div");
-
-    more.className = "task-preview-more";
-
-    more.textContent =
-      `+ ${tasks.length - 3} more task${
-        tasks.length - 3 === 1 ? "" : "s"
-      }`;
-
-    preview.appendChild(more);
-  }
-
-
-  const status = $("dailyStatus");
-
-  if (status) {
-    status.insertAdjacentElement(
-      "afterend",
-      preview
-    );
-  }
-}
-
-
-
-/* =========================
-   FIXED TARGET
-   ========================= */
-
-function updateFixedTarget() {
-
-  const today = getTodayKey();
-
-  const target = data.fixedTarget;
-
-  const completed =
-    target.completedDates[today] === true;
-
-
-  if ($("fixedTargetName")) {
-
-    $("fixedTargetName").textContent =
-      target.name || "No fixed target";
-  }
-
-
-  if ($("fixedTargetTime")) {
-
-    $("fixedTargetTime").textContent =
-      target.time
-        ? formatTime(target.time)
-        : "No time set";
-  }
-
-
-  if ($("fixedStatus")) {
-
-    $("fixedStatus").textContent =
-      completed
-        ? "✓ Completed today"
-        : "Not completed";
-  }
-
-
-  if ($("fixedComplete")) {
-
-    $("fixedComplete").textContent =
-      completed
-        ? "Completed ✓"
-        : "Mark Complete";
-  }
-}
-
-
-
-/* =========================
-   TASK PLANNER
-   ========================= */
-
-let plannerDate = getTodayKey();
-
-
-function openRegularPlanner(date = getTodayKey()) {
-
-  plannerDate = date;
-
-  if ($("plannerDate")) {
-    $("plannerDate").value = plannerDate;
-  }
-
-  renderPlannerTasks();
-
-  show($("regularPlanner"));
-}
-
-
-function closeRegularPlanner() {
-  hide($("regularPlanner"));
-}
-
-
-function renderPlannerTasks() {
-
-  const container = $("regularTasksList");
-
-  if (!container) return;
-
-  container.innerHTML = "";
-
-  const tasks = data.tasks
-    .filter(task => task.date === plannerDate)
-    .sort((a, b) => a.time.localeCompare(b.time));
-
-
-  if (tasks.length === 0) {
-
-    container.innerHTML = `
-      <p class="empty-tasks">
-        No tasks added yet.
-      </p>
-    `;
-
-    return;
-  }
-
-
-  tasks.forEach(task => {
-
-    const row = document.createElement("div");
-
-    row.className =
-      `planner-task ${task.completed ? "completed" : ""}`;
-
-
-    row.innerHTML = `
-      <label class="task-check-wrap">
-
-        <input
-          type="checkbox"
-          class="planner-task-checkbox"
-          data-task-id="${task.id}"
-          ${task.completed ? "checked" : ""}
-        >
-
-        <span class="custom-check"></span>
-
-      </label>
-
-      <div class="planner-task-info">
-
-        <strong>
-          ${escapeHTML(task.name)}
-        </strong>
-
-        <span>
-          ${formatDate(task.date)} • ${formatTime(task.time)}
-        </span>
-
-      </div>
-
-      <button
-        type="button"
-        class="delete-task"
-        data-delete-task="${task.id}"
-        aria-label="Delete task"
-      >
-        ×
-      </button>
-    `;
-
-    container.appendChild(row);
-  });
-}
-
-
-
-/* =========================
-   ADD TASK
-   ========================= */
-
-function openTaskModal() {
-
-  if ($("taskNameInput")) {
-    $("taskNameInput").value = "";
-  }
-
-  if ($("taskDateInput")) {
-    $("taskDateInput").value =
-      plannerDate || getTodayKey();
-  }
-
-  if ($("taskTimeInput")) {
-    $("taskTimeInput").value = "";
-  }
-
-  show($("taskModal"));
-}
-
-
-function closeTaskModal() {
-  hide($("taskModal"));
-}
-
-
-function saveTask() {
-
-  const name =
-    $("taskNameInput")?.value.trim();
-
-  const date =
-    $("taskDateInput")?.value;
-
-  const time =
-    $("taskTimeInput")?.value;
-
-
-  if (!name) {
-    alert("Please enter a task name.");
-    return;
-  }
-
-
-  if (!date) {
-    alert("Please select a date.");
-    return;
-  }
-
-
-  if (!time) {
-    alert("Please select a time.");
-    return;
-  }
-
-
-  const task = {
+function normalizeFixed(target) {
+  const completedDate =
+    target.completedDate ||
+    (target.completed
+      ? todayKey()
+      : "");
+
+  return {
     id:
-      Date.now().toString() +
-      Math.random().toString(36).slice(2),
+      target.id ||
+      makeId("fixed"),
 
-    name: name,
+    name:
+      String(
+        target.name ||
+        target.title ||
+        ""
+      ).trim(),
 
-    date: date,
+    time:
+      target.time ||
+      "",
 
-    time: time,
+    completed:
+      completedDate === todayKey(),
 
-    completed: false,
-
-    snoozeUntil: null,
-
-    lastNotified: null
+    completedDate
   };
-
-
-  data.tasks.push(task);
-
-  plannerDate = date;
-
-  saveData();
-
-  updateAll();
-
-  renderPlannerTasks();
-
-  closeTaskModal();
 }
 
 
+function normalizeData(input) {
+  const data = emptyData();
 
-/* =========================
-   TASK CHECKBOX
-   ========================= */
+  data.bestStreak =
+    Number.isFinite(input.bestStreak)
+      ? input.bestStreak
+      : 0;
 
-function toggleTask(taskId, completed) {
+  data.streak =
+    Number.isFinite(input.streak)
+      ? input.streak
+      : 0;
 
-  const task = data.tasks.find(
-    item => item.id === taskId
-  );
 
-  if (!task) return;
+  if (Array.isArray(input.fixedTargets)) {
 
-  task.completed = completed;
+    data.fixedTargets =
+      input.fixedTargets
+        .map(normalizeFixed)
+        .filter(target => target.name);
 
-  if (completed) {
-    task.snoozeUntil = null;
   }
-
-  saveData();
-
-  updateRecordForToday();
-
-  updateAll();
-
-  if (plannerDate) {
-    renderPlannerTasks();
-  }
-}
-
-
-
-/* =========================
-   DELETE TASK
-   ========================= */
-
-function deleteTask(taskId) {
-
-  const task = data.tasks.find(
-    item => item.id === taskId
-  );
-
-  if (!task) return;
-
-  const confirmed =
-    confirm(`Delete "${task.name}"?`);
-
-  if (!confirmed) return;
-
-  data.tasks = data.tasks.filter(
-    item => item.id !== taskId
-  );
-
-  saveData();
-
-  updateAll();
-
-  renderPlannerTasks();
-}
-
-
-
-/* =========================
-   COMPLETE ALL TODAY'S TASKS
-   ========================= */
-
-function completeAllTodayTasks() {
-
-  const today = getTodayKey();
-
-  const tasks = data.tasks.filter(
-    task => task.date === today
-  );
-
-  if (tasks.length === 0) {
-    openRegularPlanner(today);
-    return;
-  }
-
-  tasks.forEach(task => {
-    task.completed = true;
-    task.snoozeUntil = null;
-  });
-
-  saveData();
-
-  updateRecordForToday();
-
-  updateAll();
-
-  renderPlannerTasks();
-}
-
-
-
-/* =========================
-   FIXED TARGET EDITING
-   ========================= */
-
-let editingTargetType = "fixed";
-
-
-function openFixedTargetModal() {
-
-  editingTargetType = "fixed";
-
-  if ($("modalTitle")) {
-    $("modalTitle").textContent =
-      "Change Fixed Target";
-  }
-
-  if ($("targetInput")) {
-    $("targetInput").value =
-      data.fixedTarget.name || "";
-  }
-
-  if ($("timeInput")) {
-    $("timeInput").value =
-      data.fixedTarget.time || "";
-  }
-
-  show($("modal"));
-}
-
-
-function closeMainModal() {
-  hide($("modal"));
-}
-
-
-function saveFixedTarget() {
-
-  const name =
-    $("targetInput")?.value.trim();
-
-  const time =
-    $("timeInput")?.value;
-
-
-  if (!name) {
-    alert("Please enter a target name.");
-    return;
-  }
-
-
-  if (!time) {
-    alert("Please select a time.");
-    return;
-  }
-
-
-  data.fixedTarget.name = name;
-
-  data.fixedTarget.time = time;
-
-  saveData();
-
-  updateAll();
-
-  closeMainModal();
-}
-
-
-
-/* =========================
-   FIXED TARGET COMPLETE
-   ========================= */
-
-function completeFixedTarget() {
-
-  const today = getTodayKey();
-
-  if (!data.fixedTarget.name) {
-    openFixedTargetModal();
-    return;
-  }
-
-  data.fixedTarget.completedDates[today] = true;
-
-  saveData();
-
-  updateRecordForToday();
-
-  updateAll();
-}
-
-
-
-/* =========================
-   STUDY TIMER
-   ========================= */
-
-let timerMode = "stopwatch";
-
-let timerRunning = false;
-
-let timerInterval = null;
-
-let timerStartedAt = null;
-
-let timerAccumulatedSeconds = 0;
-
-let countdownTotalSeconds = 0;
-
-
-
-function getStudyMinutes(dateKey) {
-
-  return Number(
-    data.study.minutesByDate[dateKey] || 0
-  );
-}
-
-
-function addStudyMinutes(dateKey, minutes) {
-
-  if (!data.study.minutesByDate[dateKey]) {
-    data.study.minutesByDate[dateKey] = 0;
-  }
-
-  data.study.minutesByDate[dateKey] += minutes;
-
-  saveData();
-}
-
-
-function setTimerMode(mode) {
-
-  if (timerRunning) {
-    pauseStudyTimer();
-  }
-
-  timerMode = mode;
-
-  timerAccumulatedSeconds = 0;
-
-  countdownTotalSeconds = 0;
-
-  if ($("stopwatchMode")) {
-    $("stopwatchMode").classList.toggle(
-      "active",
-      mode === "stopwatch"
-    );
-  }
-
-  if ($("countdownMode")) {
-    $("countdownMode").classList.toggle(
-      "active",
-      mode === "countdown"
-    );
-  }
-
-  if ($("countdownInput")) {
-    $("countdownInput").classList.toggle(
-      "hidden",
-      mode !== "countdown"
-    );
-  }
-
-  updateTimerDisplay();
-}
-
-
-function startStudyTimer() {
-
-  if (timerRunning) return;
-
-
-  if (timerMode === "countdown") {
-
-    if (countdownTotalSeconds <= 0) {
-
-      const minutes =
-        Number(
-          $("countdownMinutes")?.value || 0
-        );
-
-      if (!minutes || minutes <= 0) {
-        alert("Enter countdown minutes first.");
-        return;
-      }
-
-      countdownTotalSeconds =
-        Math.floor(minutes * 60);
-    }
-  }
-
-
-  timerRunning = true;
-
-  timerStartedAt = Date.now();
-
-  timerInterval = setInterval(
-    updateTimerDisplay,
-    500
-  );
-
-  updateTimerDisplay();
-}
-
-
-function pauseStudyTimer() {
-
-  if (!timerRunning) return;
-
-  const now = Date.now();
-
-  const elapsed =
-    Math.floor(
-      (now - timerStartedAt) / 1000
-    );
-
-
-  if (timerMode === "stopwatch") {
-
-    timerAccumulatedSeconds += elapsed;
-
-  } else {
-
-    timerAccumulatedSeconds += elapsed;
-  }
-
-
-  timerRunning = false;
-
-  timerStartedAt = null;
-
-  clearInterval(timerInterval);
-
-  timerInterval = null;
-
-  saveCurrentStudySession();
-
-  updateTimerDisplay();
-}
-
-
-function resetStudyTimer() {
-
-  if (timerRunning) {
-
-    timerRunning = false;
-
-    timerStartedAt = null;
-
-    clearInterval(timerInterval);
-
-    timerInterval = null;
-  }
-
-  timerAccumulatedSeconds = 0;
-
-  countdownTotalSeconds = 0;
-
-  updateTimerDisplay();
-}
-
-
-function finishCountdown() {
-
-  if (!timerRunning) return;
-
-  timerAccumulatedSeconds =
-    countdownTotalSeconds;
-
-  timerRunning = false;
-
-  timerStartedAt = null;
-
-  clearInterval(timerInterval);
-
-  timerInterval = null;
-
-  addStudyMinutes(
-    getTodayKey(),
-    Math.floor(countdownTotalSeconds / 60)
-  );
-
-  timerAccumulatedSeconds = 0;
-
-  countdownTotalSeconds = 0;
-
-  updateAll();
-
-  updateTimerDisplay();
-
-  alert("Countdown finished. Study time saved.");
-}
-
-
-function getCurrentTimerSeconds() {
-
-  if (!timerRunning) {
-    return timerAccumulatedSeconds;
-  }
-
-  const elapsed =
-    Math.floor(
-      (Date.now() - timerStartedAt) / 1000
-    );
-
-  if (timerMode === "stopwatch") {
-
-    return timerAccumulatedSeconds + elapsed;
-
-  } else {
-
-    return Math.max(
-      0,
-      countdownTotalSeconds -
-      (timerAccumulatedSeconds + elapsed)
-    );
-  }
-}
-
-
-function updateTimerDisplay() {
-
-  if (!$("timerDisplay")) return;
-
-  let seconds =
-    getCurrentTimerSeconds();
 
 
   if (
-    timerMode === "countdown" &&
-    timerRunning &&
-    seconds <= 0
+    input.tasks &&
+    typeof input.tasks === "object"
   ) {
 
-    finishCountdown();
+    for (
+      const [date, list]
+      of Object.entries(input.tasks)
+    ) {
 
-    seconds = 0;
-  }
+      if (Array.isArray(list)) {
 
+        data.tasks[date] =
+          list
+            .map(task =>
+              normalizeTask(task, date)
+            )
+            .filter(task => task.name);
 
-  $("timerDisplay").textContent =
-    formatDuration(seconds);
-}
+      }
 
-
-function formatDuration(totalSeconds) {
-
-  totalSeconds =
-    Math.max(
-      0,
-      Math.floor(totalSeconds)
-    );
-
-  const hours =
-    Math.floor(totalSeconds / 3600);
-
-  const minutes =
-    Math.floor(
-      (totalSeconds % 3600) / 60
-    );
-
-  const seconds =
-    totalSeconds % 60;
-
-
-  return [
-    String(hours).padStart(2, "0"),
-    String(minutes).padStart(2, "0"),
-    String(seconds).padStart(2, "0")
-  ].join(":");
-}
-
-
-function saveCurrentStudySession() {
-
-  if (timerAccumulatedSeconds <= 0) {
-    return;
-  }
-
-  const minutes =
-    timerAccumulatedSeconds / 60;
-
-  /*
-    Keep partial minutes internally by rounding
-    to the nearest minute for today's total.
-  */
-
-  const roundedMinutes =
-    Math.max(1, Math.round(minutes));
-
-  addStudyMinutes(
-    getTodayKey(),
-    roundedMinutes
-  );
-
-  timerAccumulatedSeconds = 0;
-
-  updateAll();
-}
-
-
-function saveManualStudyTime() {
-
-  const input =
-    $("manualStudyTime");
-
-  if (!input) return;
-
-  const minutes =
-    Number(input.value);
-
-
-  if (!minutes || minutes <= 0) {
-
-    alert("Enter the number of minutes studied.");
-
-    return;
-  }
-
-
-  addStudyMinutes(
-    getTodayKey(),
-    Math.floor(minutes)
-  );
-
-
-  input.value = "";
-
-  updateRecordForToday();
-
-  updateAll();
-}
-
-
-function updateStudyUI() {
-
-  const today = getTodayKey();
-
-  const minutes =
-    getStudyMinutes(today);
-
-
-  if ($("studyTimeToday")) {
-
-    $("studyTimeToday").textContent =
-      formatStudyMinutes(minutes);
-  }
-}
-
-
-function formatStudyMinutes(minutes) {
-
-  minutes = Math.floor(minutes);
-
-  if (minutes < 60) {
-    return `${minutes} min`;
-  }
-
-  const hours =
-    Math.floor(minutes / 60);
-
-  const remaining =
-    minutes % 60;
-
-  if (remaining === 0) {
-    return `${hours} hr`;
-  }
-
-  return `${hours} hr ${remaining} min`;
-}
-
-
-function startTimerLoop() {
-
-  setInterval(() => {
-
-    if (timerRunning) {
-      updateTimerDisplay();
     }
 
-  }, 500);
+  }
+
+
+  if (
+    input.studyByDate &&
+    typeof input.studyByDate === "object"
+  ) {
+
+    for (
+      const [date, value]
+      of Object.entries(input.studyByDate)
+    ) {
+
+      const seconds =
+        typeof value === "object"
+
+          ? Number(
+              value.seconds ||
+              value.minutes * 60 ||
+              0
+            )
+
+          : Number(value);
+
+
+      if (seconds > 0) {
+
+        data.studyByDate[date] =
+          Math.round(seconds);
+
+      }
+
+    }
+
+  }
+
+
+  data.completedDays = {
+    ...(input.completedDays || {})
+  };
+
+
+  data.notified = {
+    ...(input.notified || {})
+  };
+
+
+  return data;
 }
 
 
+// =========================================================
+// OLD DATA MIGRATION
+// =========================================================
 
-/* =========================
-   TODAY SUMMARY
-   ========================= */
+function migrateData() {
 
-function updateTodaySummary() {
+  let currentData = null;
 
-  const today = getTodayKey();
+  try {
 
-  const tasks =
-    data.tasks.filter(
-      task => task.date === today
-    );
+    currentData =
+      JSON.parse(
+        localStorage.getItem(STORAGE_KEY) ||
+        "null"
+      );
+
+  } catch (_) {}
+
+
+  if (currentData) {
+
+    return normalizeData(currentData);
+
+  }
+
+
+  for (const key of OLD_KEYS) {
+
+    try {
+
+      const old =
+        JSON.parse(
+          localStorage.getItem(key) ||
+          "null"
+        );
+
+
+      if (!old) continue;
+
+
+      const migrated =
+        emptyData();
+
+
+      // Fixed targets
+
+      if (Array.isArray(old.fixedTargets)) {
+
+        migrated.fixedTargets =
+          old.fixedTargets
+            .map(normalizeFixed)
+            .filter(target => target.name);
+
+      }
+
+      else if (
+        old.fixedTarget &&
+        old.fixedTarget.name
+      ) {
+
+        migrated.fixedTargets.push(
+          normalizeFixed(old.fixedTarget)
+        );
+
+      }
+
+
+      // New-style task storage
+
+      if (
+        old.tasks &&
+        typeof old.tasks === "object"
+      ) {
+
+        for (
+          const [date, list]
+          of Object.entries(old.tasks)
+        ) {
+
+          if (Array.isArray(list)) {
+
+            migrated.tasks[date] =
+              list
+                .map(task =>
+                  normalizeTask(task, date)
+                )
+                .filter(task => task.name);
+
+          }
+
+        }
+
+      }
+
+
+      // Old single daily target
+
+      if (
+        old.dailyTarget &&
+        old.dailyTarget.name
+      ) {
+
+        const date =
+          old.dailyTarget.date ||
+          todayKey();
+
+
+        migrated.tasks[date] =
+          migrated.tasks[date] || [];
+
+
+        migrated.tasks[date].push(
+          normalizeTask(
+            {
+              name:
+                old.dailyTarget.name,
+
+              time:
+                old.dailyTarget.time,
+
+              completed:
+                old.dailyTarget.completed,
+
+              date
+            },
+            date
+          )
+        );
+
+      }
+
+
+      // Study history
+
+      if (
+        old.studyByDate &&
+        typeof old.studyByDate === "object"
+      ) {
+
+        migrated.studyByDate =
+          {
+            ...old.studyByDate
+          };
+
+      }
+
+      else if (
+        old.studyTimeByDate &&
+        typeof old.studyTimeByDate === "object"
+      ) {
+
+        migrated.studyByDate =
+          {
+            ...old.studyTimeByDate
+          };
+
+      }
+
+
+      // Completed days
+
+      if (
+        old.completedDays &&
+        typeof old.completedDays === "object"
+      ) {
+
+        migrated.completedDays =
+          {
+            ...old.completedDays
+          };
+
+      }
+
+
+      if (
+        Number.isFinite(old.bestStreak)
+      ) {
+
+        migrated.bestStreak =
+          old.bestStreak;
+
+      }
+
+
+      return normalizeData(migrated);
+
+    } catch (_) {}
+
+  }
+
+
+  return emptyData();
+}
+
+
+let data = migrateData();
+
+
+// =========================================================
+// APPLICATION STATE
+// =========================================================
+
+let plannerDate = todayKey();
+
+let reminderTimer = null;
+
+let notificationCheckTimer = null;
+
+
+const timer = {
+
+  mode: "stopwatch",
+
+  running: false,
+
+  startedAt: null,
+
+  elapsedMs: 0,
+
+  savedMs: 0,
+
+  countdownDurationMs: 0,
+
+  countdownRemainingMs: 0,
+
+  lastDisplaySecond: -1
+
+};
+
+
+// =========================================================
+// STORAGE
+// =========================================================
+
+function save() {
+
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(data)
+  );
+
+}
+
+
+// =========================================================
+// TASK HELPERS
+// =========================================================
+
+function getTasks(date = todayKey()) {
+
+  return Array.isArray(data.tasks[date])
+    ? data.tasks[date]
+    : [];
+
+}
+
+
+function setTasks(date, tasks) {
+
+  if (tasks.length) {
+
+    data.tasks[date] = tasks;
+
+  }
+
+  else {
+
+    delete data.tasks[date];
+
+  }
+
+}
+
+
+function getStudySeconds(date = todayKey()) {
+
+  return Number(
+    data.studyByDate[date] || 0
+  );
+
+}
+
+
+function formatTaskSummary(tasks) {
 
   const completed =
     tasks.filter(
       task => task.completed
-    );
+    ).length;
 
 
-  if ($("todayTaskSummary")) {
+  return `${completed} / ${tasks.length} completed`;
 
-    $("todayTaskSummary").textContent =
-      `${completed.length} / ${tasks.length}`;
-  }
-
-
-  if ($("todayStudySummary")) {
-
-    $("todayStudySummary").textContent =
-      formatStudyMinutes(
-        getStudyMinutes(today)
-      );
-  }
-
-
-  if ($("todayFixedSummary")) {
-
-    const fixedDone =
-      data.fixedTarget.completedDates[today] === true;
-
-    $("todayFixedSummary").textContent =
-      fixedDone
-        ? "Completed ✓"
-        : "Not completed";
-  }
 }
 
 
+// =========================================================
+// FIXED TARGET DAILY RESET
+// =========================================================
 
-/* =========================
-   PROGRESS
-   ========================= */
+function resetFixedTargetsForToday() {
 
-function updateProgress() {
+  const today = todayKey();
 
-  const today = getTodayKey();
+  let changed = false;
+
+
+  data.fixedTargets.forEach(target => {
+
+    if (
+      target.completedDate !== today
+    ) {
+
+      target.completed = false;
+
+      target.completedDate = today;
+
+      changed = true;
+
+    }
+
+  });
+
+
+  if (changed) {
+
+    save();
+
+  }
+
+}
+
+
+// =========================================================
+// STREAK
+// =========================================================
+
+function updateDayCompletion(date) {
 
   const tasks =
-    data.tasks.filter(
-      task => task.date === today
+    getTasks(date);
+
+
+  const fixedCount =
+    data.fixedTargets.length;
+
+
+  const fixedDone =
+    data.fixedTargets.filter(
+      target => target.completed
+    ).length;
+
+
+  const hasItems =
+    tasks.length > 0 ||
+    fixedCount > 0;
+
+
+  const complete =
+    hasItems &&
+    tasks.every(
+      task => task.completed
+    ) &&
+    fixedDone === fixedCount;
+
+
+  if (complete) {
+
+    data.completedDays[date] = true;
+
+  }
+
+  else {
+
+    delete data.completedDays[date];
+
+  }
+
+
+  updateStreak();
+
+  save();
+
+}
+
+
+function updateStreak() {
+
+  let current = 0;
+
+  let misses = 0;
+
+  const previousBest =
+    Number(data.bestStreak || 0);
+
+
+  const date = new Date();
+
+
+  while (true) {
+
+    const key =
+      `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}-${String(
+        date.getDate()
+      ).padStart(2, "0")`;
+
+
+    if (data.completedDays[key]) {
+
+      current++;
+
+      misses = 0;
+
+    }
+
+    else {
+
+      misses++;
+
+      // One missed day is allowed.
+      // Two consecutive missed days break the streak.
+
+      if (misses >= 2) {
+
+        break;
+
+      }
+
+    }
+
+
+    date.setDate(
+      date.getDate() - 1
     );
 
-  const completed =
+  }
+
+
+  data.streak = current;
+
+  data.bestStreak =
+    Math.max(
+      previousBest,
+      current
+    );
+
+}
+
+
+// =========================================================
+// MAIN DASHBOARD
+// =========================================================
+
+function updateMainUI() {
+
+  resetFixedTargetsForToday();
+
+
+  const today =
+    todayKey();
+
+
+  const tasks =
+    getTasks(today);
+
+
+  const fixed =
+    data.fixedTargets;
+
+
+  const taskDone =
     tasks.filter(
       task => task.completed
-    );
+    ).length;
 
 
-  const fixedCompleted =
-    data.fixedTarget.completedDates[today] === true;
+  const fixedDone =
+    fixed.filter(
+      target => target.completed
+    ).length;
 
 
-  const totalItems =
-    tasks.length + 1;
-
-  const completedItems =
-    completed.length +
-    (fixedCompleted ? 1 : 0);
+  const total =
+    tasks.length +
+    fixed.length;
 
 
-  let percentage = 0;
+  const completed =
+    taskDone +
+    fixedDone;
 
-  if (totalItems > 0) {
 
-    percentage =
-      Math.round(
-        (completedItems / totalItems) * 100
-      );
+  const percent =
+    total
+      ? Math.round(
+          completed /
+          total *
+          100
+        )
+      : 0;
+
+
+  if ($("todayDate")) {
+
+    $("todayDate").textContent =
+      formatDateLong(today);
+
+  }
+
+
+  if ($("bestStreak")) {
+
+    $("bestStreak").textContent =
+      data.bestStreak;
+
   }
 
 
   if ($("progressPercent")) {
+
     $("progressPercent").textContent =
-      `${percentage}%`;
+      `${percent}%`;
+
   }
 
 
   if ($("progressFill")) {
+
     $("progressFill").style.width =
-      `${percentage}%`;
+      `${percent}%`;
+
   }
 
 
   if ($("progressText")) {
 
     $("progressText").textContent =
-      `${completedItems} of ${totalItems} completed`;
+      `${completed} of ${total} completed`;
+
   }
+
+
+  const firstTask =
+    tasks.find(
+      task => task.time
+    ) ||
+    tasks[0];
+
+
+  if ($("dailyTargetName")) {
+
+    $("dailyTargetName").textContent =
+      tasks.length
+        ? `${tasks.length} task${
+            tasks.length === 1
+              ? ""
+              : "s"
+          } planned`
+        : "No tasks planned";
+
+  }
+
+
+  if ($("dailyTargetTime")) {
+
+    $("dailyTargetTime").textContent =
+      firstTask
+        ? `📋 ${firstTask.name}: ${formatTime(
+            firstTask.time
+          )}`
+        : "No task planned";
+
+  }
+
+
+  if ($("regularTargetProgress")) {
+
+    $("regularTargetProgress").textContent =
+      `${taskDone} / ${tasks.length} completed`;
+
+  }
+
+
+  if ($("dailyStatus")) {
+
+    $("dailyStatus").textContent =
+      tasks.length &&
+      taskDone === tasks.length
+
+        ? "✓ All tasks completed"
+
+        : tasks.length
+
+          ? `${tasks.length - taskDone} task${
+              tasks.length - taskDone === 1
+                ? ""
+                : "s"
+            } remaining`
+
+          : "No tasks planned";
+
+  }
+
+
+  $("dailyStatus")?.classList.toggle(
+    "done",
+    tasks.length > 0 &&
+    taskDone === tasks.length
+  );
+
+
+  // Fixed targets
+
+  if ($("fixedTargetName")) {
+
+    $("fixedTargetName").textContent =
+      fixed.length
+        ? `${fixed.length} fixed target${
+            fixed.length === 1
+              ? ""
+              : "s"
+          }`
+        : "No fixed targets";
+
+  }
+
+
+  const firstFixed =
+    fixed.find(
+      target => target.time
+    ) ||
+    fixed[0];
+
+
+  if ($("fixedTargetTime")) {
+
+    $("fixedTargetTime").textContent =
+      firstFixed
+        ? `⏰ ${firstFixed.name}: ${formatTime(
+            firstFixed.time
+          )}`
+        : "No fixed targets";
+
+  }
+
+
+  if ($("fixedStatus")) {
+
+    $("fixedStatus").textContent =
+      fixed.length &&
+      fixedDone === fixed.length
+
+        ? "✓ All completed"
+
+        : fixed.length
+
+          ? `${fixed.length - fixedDone} remaining`
+
+          : "No fixed targets";
+
+  }
+
+
+  $("fixedStatus")?.classList.toggle(
+    "done",
+    fixed.length > 0 &&
+    fixedDone === fixed.length
+  );
+
+
+  // Study time
+
+  if ($("studyTimeToday")) {
+
+    $("studyTimeToday").textContent =
+      formatMinutes(
+        getStudySeconds(today)
+      );
+
+  }
+
+
+  // Summary
+
+  if ($("todayTaskSummary")) {
+
+    $("todayTaskSummary").textContent =
+      formatTaskSummary(tasks);
+
+  }
+
+
+  if ($("todayStudySummary")) {
+
+    $("todayStudySummary").textContent =
+      formatMinutes(
+        getStudySeconds(today)
+      );
+
+  }
+
+
+  if ($("todayFixedSummary")) {
+
+    $("todayFixedSummary").textContent =
+      `${fixedDone} / ${fixed.length} completed`;
+
+  }
+
+
+  updateHistory();
+
+  updateNotificationButton();
+
 }
 
 
+// =========================================================
+// 7-DAY HISTORY
+// =========================================================
 
-/* =========================
-   WEEKLY STATISTICS
-   ========================= */
+function updateHistory() {
 
-function getLastSevenDays() {
-
-  const days = [];
-
-  const today =
-    dateFromKey(getTodayKey());
+  const container =
+    $("history");
 
 
-  for (let i = 6; i >= 0; i--) {
+  if (!container) return;
+
+
+  container.innerHTML = "";
+
+
+  for (let i = 0; i < 7; i++) {
 
     const date =
-      addDays(today, -i);
+      new Date();
 
-    days.push(
-      getDateKey(date)
+
+    date.setDate(
+      date.getDate() - i
     );
-  }
 
 
-  return days;
-}
-
-
-function updateWeeklyStats() {
-
-  const days =
-    getLastSevenDays();
-
-
-  let totalStudy = 0;
-
-  let totalTasks = 0;
-
-  let completedTasks = 0;
-
-
-  days.forEach(day => {
-
-    totalStudy +=
-      getStudyMinutes(day);
+    const key =
+      `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}-${String(
+        date.getDate()
+      ).padStart(2, "0")`;
 
 
     const tasks =
-      data.tasks.filter(
-        task => task.date === day
-      );
+      getTasks(key);
 
-
-    totalTasks += tasks.length;
-
-
-    completedTasks +=
-      tasks.filter(
-        task => task.completed
-      ).length;
-  });
-
-
-  if ($("weeklyStudyTotal")) {
-
-    $("weeklyStudyTotal").textContent =
-      formatStudyMinutes(totalStudy);
-  }
-
-
-  if ($("weeklyTasksCompleted")) {
-
-    $("weeklyTasksCompleted").textContent =
-      completedTasks;
-  }
-
-
-  if ($("weeklyTasksTotal")) {
-
-    $("weeklyTasksTotal").textContent =
-      totalTasks;
-  }
-
-
-  if ($("weeklyBestStreak")) {
-
-    $("weeklyBestStreak").textContent =
-      data.bestStreak || 0;
-  }
-
-
-  renderWeeklyChart(days);
-  renderWeeklyHistory(days);
-}
-
-
-function renderWeeklyChart(days) {
-
-  const container =
-    $("weeklyChart");
-
-  if (!container) return;
-
-  container.innerHTML = "";
-
-
-  const values =
-    days.map(
-      day => getStudyMinutes(day)
-    );
-
-
-  const max =
-    Math.max(
-      ...values,
-      1
-    );
-
-
-  const chart =
-    document.createElement("div");
-
-  chart.className =
-    "chart-bars";
-
-
-  days.forEach((day, index) => {
-
-    const value =
-      values[index];
-
-
-    const barHeight =
-      Math.max(
-        5,
-        Math.round(
-          (value / max) * 150
-        )
-      );
-
-
-    const column =
-      document.createElement("div");
-
-    column.className =
-      "chart-column";
-
-
-    const valueText =
-      document.createElement("span");
-
-    valueText.className =
-      "chart-value";
-
-    valueText.textContent =
-      `${value}m`;
-
-
-    const bar =
-      document.createElement("div");
-
-    bar.className =
-      "chart-bar";
-
-    bar.style.height =
-      `${barHeight}px`;
-
-
-    const label =
-      document.createElement("span");
-
-    label.className =
-      "chart-label";
-
-    label.textContent =
-      dateFromKey(day).toLocaleDateString(
-        "en-IN",
-        { weekday: "short" }
-      ).slice(0, 3);
-
-
-    column.appendChild(valueText);
-
-    column.appendChild(bar);
-
-    column.appendChild(label);
-
-    chart.appendChild(column);
-  });
-
-
-  container.appendChild(chart);
-}
-
-
-function renderWeeklyHistory(days) {
-
-  const container =
-    $("weeklyHistory");
-
-  if (!container) return;
-
-  container.innerHTML = "";
-
-
-  days.forEach(day => {
-
-    const tasks =
-      data.tasks.filter(
-        task => task.date === day
-      );
 
     const completed =
       tasks.filter(
@@ -1715,119 +1064,2568 @@ function renderWeeklyHistory(days) {
 
 
     const study =
-      getStudyMinutes(day);
+      getStudySeconds(key);
+
+
+    const label =
+      i === 0
+
+        ? "Today"
+
+        : date.toLocaleDateString(
+            "en-IN",
+            {
+              weekday: "short",
+              day: "numeric",
+              month: "short"
+            }
+          );
 
 
     const row =
       document.createElement("div");
 
-    row.className =
-      "weekly-history-row";
-
-
-    row.innerHTML = `
-      <span>
-        ${formatShortDate(day)}
-      </span>
-
-      <span>
-        ${completed}/${tasks.length} tasks
-      </span>
-
-      <strong>
-        ${formatStudyMinutes(study)}
-      </strong>
-    `;
-
-
-    container.appendChild(row);
-  });
-}
-
-
-
-/* =========================
-   HISTORY
-   ========================= */
-
-function updateHistory() {
-
-  const container =
-    $("history");
-
-  if (!container) return;
-
-
-  const records =
-    Object.entries(data.records)
-      .sort(
-        (a, b) => b[0].localeCompare(a[0])
-      )
-      .slice(0, 30);
-
-
-  if (records.length === 0) {
-
-    container.innerHTML =
-      "<p>No history yet.</p>";
-
-    return;
-  }
-
-
-  container.innerHTML = "";
-
-
-  records.forEach(([date, record]) => {
-
-    const row =
-      document.createElement("div");
 
     row.className =
       "history-row";
 
 
     row.innerHTML = `
-      <div>
-        <strong>
-          ${formatDate(date)}
-        </strong>
-
-        <small>
-          ${record.tasksCompleted}/${record.tasksTotal} tasks
-          • ${formatStudyMinutes(record.studyMinutes)}
-        </small>
-      </div>
+      <span class="history-day">
+        ${escapeHtml(label)}
+      </span>
 
       <span class="history-status">
         ${
-          record.completedDay
-            ? "✓ Complete"
-            : "Incomplete"
+          tasks.length
+            ? `${completed}/${tasks.length}`
+            : "—"
         }
+        ·
+        ${formatMinutes(study)}
       </span>
     `;
 
 
     container.appendChild(row);
-  });
+
+  }
+
 }
 
 
+// =========================================================
+// FULL INTERFACE MANAGEMENT
+// =========================================================
 
-/* =========================
-   NOTIFICATIONS
-   ========================= */
+function showView(id) {
+
+  [
+    "regularTasksView",
+    "regularPlanner",
+    "fixedTargetsView",
+    "weeklyStatsView"
+  ].forEach(viewId => {
+
+    $(viewId)?.classList.add(
+      "hidden"
+    );
+
+  });
+
+
+  $(id)?.classList.remove(
+    "hidden"
+  );
+
+
+  document.body.style.overflow =
+    "hidden";
+
+}
+
+
+function closeAllViews() {
+
+  [
+    "regularTasksView",
+    "regularPlanner",
+    "fixedTargetsView",
+    "weeklyStatsView"
+  ].forEach(viewId => {
+
+    $(viewId)?.classList.add(
+      "hidden"
+    );
+
+  });
+
+
+  document.body.style.overflow =
+    "";
+
+}
+
+
+// =========================================================
+// REGULAR TASKS INTERFACE
+// =========================================================
+
+function openRegularTasks() {
+
+  renderRegularTasks();
+
+  showView(
+    "regularTasksView"
+  );
+
+}
+
+
+function renderRegularTasks() {
+
+  const date =
+    todayKey();
+
+
+  const tasks =
+    getTasks(date);
+
+
+  if ($("regularTasksDate")) {
+
+    $("regularTasksDate").textContent =
+      formatDateLong(date);
+
+  }
+
+
+  if ($("regularTasksCount")) {
+
+    $("regularTasksCount").textContent =
+      `${tasks.length} task${
+        tasks.length === 1
+          ? ""
+          : "s"
+      }`;
+
+  }
+
+
+  const completed =
+    tasks.filter(
+      task => task.completed
+    ).length;
+
+
+  if ($("regularTasksProgress")) {
+
+    $("regularTasksProgress").textContent =
+      `${completed} / ${tasks.length}`;
+
+  }
+
+
+  if ($("regularTasksProgressFill")) {
+
+    $("regularTasksProgressFill").style.width =
+      `${tasks.length
+        ? completed / tasks.length * 100
+        : 0}%`;
+
+  }
+
+
+  const list =
+    $("regularTasksList");
+
+
+  if (!list) return;
+
+
+  list.innerHTML = "";
+
+
+  if (!tasks.length) {
+
+    list.innerHTML = `
+      <div class="empty-state">
+        <strong>No tasks planned</strong>
+        <span>Add your first regular task.</span>
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  const sortedTasks =
+    [...tasks].sort(
+      (a, b) =>
+        (a.time || "99:99")
+          .localeCompare(
+            b.time || "99:99"
+          )
+    );
+
+
+  sortedTasks.forEach(task => {
+
+    const row =
+      document.createElement("div");
+
+
+    row.className =
+      `task-row${
+        task.completed
+          ? " completed"
+          : ""
+      }`;
+
+
+    row.innerHTML = `
+      <input
+        class="task-checkbox"
+        type="checkbox"
+        ${
+          task.completed
+            ? "checked"
+            : ""
+        }
+        aria-label="Complete task"
+      >
+
+      <div class="task-row-content">
+
+        <div class="task-row-name">
+          ${escapeHtml(task.name)}
+        </div>
+
+        <div class="task-row-time">
+          ${
+            task.time
+              ? formatTime(task.time)
+              : "No time set"
+          }
+        </div>
+
+      </div>
+
+      <button
+        class="task-delete-button"
+        type="button"
+        title="Delete task"
+      >
+        ×
+      </button>
+    `;
+
+
+    row
+      .querySelector(".task-checkbox")
+      .addEventListener(
+        "change",
+        event => {
+
+          task.completed =
+            event.target.checked;
+
+
+          setTasks(
+            date,
+            tasks
+          );
+
+
+          updateDayCompletion(
+            date
+          );
+
+
+          renderRegularTasks();
+
+          updateMainUI();
+
+
+          if (task.completed) {
+
+            stopReminderForTask(
+              task.id
+            );
+
+          }
+
+        }
+      );
+
+
+    row
+      .querySelector(".task-delete-button")
+      .addEventListener(
+        "click",
+        () => {
+
+          if (
+            !confirm(
+              `Delete "${task.name}"?`
+            )
+          ) {
+            return;
+          }
+
+
+          setTasks(
+            date,
+            tasks.filter(
+              item =>
+                item.id !== task.id
+            )
+          );
+
+
+          updateDayCompletion(
+            date
+          );
+
+
+          renderRegularTasks();
+
+          updateMainUI();
+
+        }
+      );
+
+
+    list.appendChild(row);
+
+  });
+
+}
+
+
+// =========================================================
+// REGULAR TASK PLANNER
+// =========================================================
+
+function openPlanner() {
+
+  plannerDate =
+    todayKey();
+
+
+  if ($("plannerDate")) {
+
+    $("plannerDate").value =
+      plannerDate;
+
+  }
+
+
+  renderPlanner();
+
+
+  showView(
+    "regularPlanner"
+  );
+
+}
+
+
+function renderPlanner() {
+
+  const date =
+    $("plannerDate")?.value ||
+    plannerDate ||
+    todayKey();
+
+
+  plannerDate =
+    date;
+
+
+  const list =
+    $("plannerTasksList");
+
+
+  if (!list) return;
+
+
+  list.innerHTML = "";
+
+
+  const tasks =
+    getTasks(date);
+
+
+  if (!tasks.length) {
+
+    list.innerHTML = `
+      <div class="empty-state">
+        <strong>No tasks for this date</strong>
+        <span>Use Add to create one.</span>
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  tasks.forEach(task => {
+
+    const row =
+      document.createElement("div");
+
+
+    row.className =
+      "task-row";
+
+
+    row.innerHTML = `
+      <div class="task-row-content">
+
+        <div class="task-row-name">
+          ${escapeHtml(task.name)}
+        </div>
+
+        <div class="task-row-time">
+          ${
+            task.time
+              ? formatTime(task.time)
+              : "No time set"
+          }
+        </div>
+
+      </div>
+
+      <button
+        class="task-delete-button"
+        type="button"
+      >
+        ×
+      </button>
+    `;
+
+
+    row
+      .querySelector("button")
+      .addEventListener(
+        "click",
+        () => {
+
+          setTasks(
+            date,
+            tasks.filter(
+              item =>
+                item.id !== task.id
+            )
+          );
+
+
+          save();
+
+          renderPlanner();
+
+          updateMainUI();
+
+        }
+      );
+
+
+    list.appendChild(row);
+
+  });
+
+}
+
+
+// =========================================================
+// ADD TASK MODAL
+// =========================================================
+
+function openTaskModal(
+  date = todayKey()
+) {
+
+  if ($("taskNameInput")) {
+
+    $("taskNameInput").value =
+      "";
+
+  }
+
+
+  if ($("taskDateInput")) {
+
+    $("taskDateInput").value =
+      date;
+
+  }
+
+
+  if ($("taskTimeInput")) {
+
+    $("taskTimeInput").value =
+      "";
+
+  }
+
+
+  $("taskModal")?.classList.remove(
+    "hidden"
+  );
+
+
+  setTimeout(
+    () =>
+      $("taskNameInput")?.focus(),
+    50
+  );
+
+}
+
+
+function closeTaskModal() {
+
+  $("taskModal")?.classList.add(
+    "hidden"
+  );
+
+}
+
+
+function saveTask() {
+
+  const name =
+    $("taskNameInput")
+      ?.value
+      .trim();
+
+
+  const date =
+    $("taskDateInput")
+      ?.value ||
+    todayKey();
+
+
+  const time =
+    $("taskTimeInput")
+      ?.value ||
+    "";
+
+
+  if (!name) {
+
+    alert(
+      "Please enter a task name."
+    );
+
+    return;
+
+  }
+
+
+  if (!date) {
+
+    alert(
+      "Please select a date."
+    );
+
+    return;
+
+  }
+
+
+  const tasks =
+    getTasks(date);
+
+
+  tasks.push({
+
+    id:
+      makeId("task"),
+
+    name,
+
+    date,
+
+    time,
+
+    completed:
+      false
+
+  });
+
+
+  setTasks(
+    date,
+    tasks
+  );
+
+
+  save();
+
+
+  closeTaskModal();
+
+
+  updateMainUI();
+
+
+  renderPlanner();
+
+
+  if (
+    !$("regularTasksView")
+      ?.classList.contains(
+        "hidden"
+      )
+  ) {
+
+    renderRegularTasks();
+
+  }
+
+}
+
+
+// =========================================================
+// COMPLETE ALL REGULAR TASKS
+// =========================================================
+
+function completeAllRegular() {
+
+  const date =
+    todayKey();
+
+
+  const tasks =
+    getTasks(date);
+
+
+  if (!tasks.length) {
+
+    alert(
+      "There are no regular tasks to complete."
+    );
+
+    return;
+
+  }
+
+
+  tasks.forEach(
+    task =>
+      task.completed = true
+  );
+
+
+  setTasks(
+    date,
+    tasks
+  );
+
+
+  updateDayCompletion(
+    date
+  );
+
+
+  renderRegularTasks();
+
+  updateMainUI();
+
+}
+
+
+// =========================================================
+// FIXED TARGETS INTERFACE
+// =========================================================
+
+function openFixedTargets() {
+
+  renderFixedTargets();
+
+
+  showView(
+    "fixedTargetsView"
+  );
+
+}
+
+
+function renderFixedTargets() {
+
+  const list =
+    $("fixedTargetsList");
+
+
+  if (!list) return;
+
+
+  list.innerHTML = "";
+
+
+  if ($("fixedTargetsCount")) {
+
+    $("fixedTargetsCount").textContent =
+      `${data.fixedTargets.length} target${
+        data.fixedTargets.length === 1
+          ? ""
+          : "s"
+      }`;
+
+  }
+
+
+  if (!data.fixedTargets.length) {
+
+    list.innerHTML = `
+      <div class="empty-state">
+        <strong>No fixed targets</strong>
+        <span>Add a target that repeats every day.</span>
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  data.fixedTargets.forEach(
+    target => {
+
+      const row =
+        document.createElement("div");
+
+
+      row.className =
+        "fixed-target-row";
+
+
+      row.innerHTML = `
+        <div class="fixed-target-main">
+
+          <input
+            class="task-checkbox"
+            type="checkbox"
+            ${
+              target.completed
+                ? "checked"
+                : ""
+            }
+            aria-label="Complete fixed target"
+          >
+
+          <div class="fixed-target-info">
+
+            <div class="fixed-target-name">
+              ${escapeHtml(target.name)}
+            </div>
+
+            <div class="fixed-target-time">
+              ${
+                target.time
+                  ? formatTime(target.time)
+                  : "No time set"
+              }
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="fixed-target-actions">
+
+          <button
+            class="outline-button edit-fixed"
+            type="button"
+          >
+            Edit
+          </button>
+
+          <button
+            class="secondary-button delete-fixed"
+            type="button"
+          >
+            Delete
+          </button>
+
+        </div>
+      `;
+
+
+      row
+        .querySelector(".task-checkbox")
+        .addEventListener(
+          "change",
+          event => {
+
+            target.completed =
+              event.target.checked;
+
+
+            target.completedDate =
+              event.target.checked
+                ? todayKey()
+                : "";
+
+
+            save();
+
+
+            updateDayCompletion(
+              todayKey()
+            );
+
+
+            renderFixedTargets();
+
+            updateMainUI();
+
+          }
+        );
+
+
+      row
+        .querySelector(".edit-fixed")
+        .addEventListener(
+          "click",
+          () =>
+            openTargetModal(
+              "fixed",
+              target.id
+            )
+        );
+
+
+      row
+        .querySelector(".delete-fixed")
+        .addEventListener(
+          "click",
+          () => {
+
+            if (
+              !confirm(
+                `Delete "${target.name}"?`
+              )
+            ) {
+              return;
+            }
+
+
+            data.fixedTargets =
+              data.fixedTargets.filter(
+                item =>
+                  item.id !== target.id
+              );
+
+
+            save();
+
+
+            renderFixedTargets();
+
+            updateMainUI();
+
+          }
+        );
+
+
+      list.appendChild(row);
+
+    }
+  );
+
+}
+
+
+// =========================================================
+// FIXED TARGET MODAL
+// =========================================================
+
+let editingFixedId = null;
+
+
+function openTargetModal(
+  type,
+  id = null
+) {
+
+  editingFixedId =
+    type === "fixed"
+      ? id
+      : null;
+
+
+  const target =
+    id
+      ? data.fixedTargets.find(
+          item =>
+            item.id === id
+        )
+      : null;
+
+
+  if ($("modalTitle")) {
+
+    $("modalTitle").textContent =
+      type === "fixed"
+
+        ? target
+          ? "Edit Fixed Target"
+          : "Add Fixed Target"
+
+        : "Target";
+
+  }
+
+
+  if ($("targetInput")) {
+
+    $("targetInput").value =
+      target?.name || "";
+
+  }
+
+
+  if ($("timeInput")) {
+
+    $("timeInput").value =
+      target?.time || "";
+
+  }
+
+
+  $("modal")?.classList.remove(
+    "hidden"
+  );
+
+
+  setTimeout(
+    () =>
+      $("targetInput")?.focus(),
+    50
+  );
+
+}
+
+
+function closeModal() {
+
+  $("modal")?.classList.add(
+    "hidden"
+  );
+
+
+  editingFixedId =
+    null;
+
+}
+
+
+function saveTarget() {
+
+  const name =
+    $("targetInput")
+      ?.value
+      .trim();
+
+
+  const time =
+    $("timeInput")
+      ?.value ||
+    "";
+
+
+  if (!name) {
+
+    alert(
+      "Please enter a target name."
+    );
+
+    return;
+
+  }
+
+
+  if (!time) {
+
+    alert(
+      "Please select a time."
+    );
+
+    return;
+
+  }
+
+
+  if (editingFixedId) {
+
+    const target =
+      data.fixedTargets.find(
+        item =>
+          item.id ===
+          editingFixedId
+      );
+
+
+    if (target) {
+
+      target.name =
+        name;
+
+      target.time =
+        time;
+
+    }
+
+  }
+
+  else {
+
+    data.fixedTargets.push({
+
+      id:
+        makeId("fixed"),
+
+      name,
+
+      time,
+
+      completed:
+        false,
+
+      completedDate:
+        todayKey()
+
+    });
+
+  }
+
+
+  save();
+
+
+  closeModal();
+
+
+  renderFixedTargets();
+
+  updateMainUI();
+
+}
+
+
+// =========================================================
+// WEEKLY STATISTICS
+// =========================================================
+
+function openWeeklyStats() {
+
+  renderWeeklyStats();
+
+
+  showView(
+    "weeklyStatsView"
+  );
+
+}
+
+
+function getWeekKeys() {
+
+  const today =
+    new Date();
+
+
+  const day =
+    today.getDay();
+
+
+  const mondayOffset =
+    day === 0
+      ? -6
+      : 1 - day;
+
+
+  const monday =
+    new Date(today);
+
+
+  monday.setDate(
+    today.getDate() +
+    mondayOffset
+  );
+
+
+  monday.setHours(
+    0,
+    0,
+    0,
+    0
+  );
+
+
+  return Array.from(
+    { length: 7 },
+    (_, index) => {
+
+      const date =
+        new Date(monday);
+
+
+      date.setDate(
+        monday.getDate() +
+        index
+      );
+
+
+      return `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}-${String(
+        date.getDate()
+      ).padStart(2, "0")}`;
+
+    }
+  );
+
+}
+
+
+function renderWeeklyStats() {
+
+  const keys =
+    getWeekKeys();
+
+
+  if ($("weeklyStatsDateRange")) {
+
+    $("weeklyStatsDateRange").textContent =
+      `${formatDateShort(
+        keys[0]
+      )} – ${formatDateShort(
+        keys[6]
+      )}`;
+
+  }
+
+
+  renderStudyChart(
+    keys
+  );
+
+
+  renderStudyHistory(
+    keys
+  );
+
+
+  renderTaskHistory(
+    keys
+  );
+
+}
+
+
+// =========================================================
+// WEEKLY STUDY HISTORY
+// =========================================================
+
+function renderStudyHistory(
+  keys
+) {
+
+  const container =
+    $("weeklyStudyHistory");
+
+
+  if (!container) return;
+
+
+  container.innerHTML = "";
+
+
+  const now =
+    new Date();
+
+
+  const actual =
+    keys.filter(key => {
+
+      const date =
+        dateFromKey(key);
+
+
+      return (
+        date <= now &&
+        getStudySeconds(key) > 0
+      );
+
+    });
+
+
+  if (!actual.length) {
+
+    container.innerHTML = `
+      <div class="empty-state">
+        <strong>No study time recorded</strong>
+        <span>
+          Use the stopwatch, countdown,
+          or manual entry.
+        </span>
+      </div>
+    `;
+
+
+    $("highestStudyTime").textContent =
+      "—";
+
+    $("highestStudyDay").textContent =
+      "—";
+
+    $("lowestStudyTime").textContent =
+      "—";
+
+    $("lowestStudyDay").textContent =
+      "—";
+
+
+    return;
+
+  }
+
+
+  actual.forEach(
+    key => {
+
+      const date =
+        dateFromKey(key);
+
+
+      const row =
+        document.createElement(
+          "div"
+        );
+
+
+      row.className =
+        "weekly-history-row";
+
+
+      row.innerHTML = `
+        <span class="weekly-history-date">
+          ${escapeHtml(
+            date.toLocaleDateString(
+              "en-IN",
+              {
+                weekday: "long",
+                day: "numeric",
+                month: "short"
+              }
+            )
+          )}
+        </span>
+
+        <span class="weekly-history-value">
+          ${formatMinutes(
+            getStudySeconds(key)
+          )}
+        </span>
+      `;
+
+
+      container.appendChild(row);
+
+    }
+  );
+
+
+  const sorted =
+    [...actual].sort(
+      (a, b) =>
+        getStudySeconds(b) -
+        getStudySeconds(a)
+    );
+
+
+  const highest =
+    sorted[0];
+
+
+  const lowest =
+    sorted[sorted.length - 1];
+
+
+  $("highestStudyTime").textContent =
+    formatMinutes(
+      getStudySeconds(highest)
+    );
+
+
+  $("highestStudyDay").textContent =
+    dateLabel(highest);
+
+
+  $("lowestStudyTime").textContent =
+    formatMinutes(
+      getStudySeconds(lowest)
+    );
+
+
+  $("lowestStudyDay").textContent =
+    dateLabel(lowest);
+
+}
+
+
+// =========================================================
+// WEEKLY TASK HISTORY
+// =========================================================
+
+function renderTaskHistory(
+  keys
+) {
+
+  const container =
+    $("weeklyTaskHistory");
+
+
+  if (!container) return;
+
+
+  container.innerHTML = "";
+
+
+  keys.forEach(
+    key => {
+
+      const date =
+        dateFromKey(key);
+
+
+      const tasks =
+        getTasks(key);
+
+
+      let value =
+        "No tasks planned";
+
+
+      if (tasks.length) {
+
+        value =
+          tasks.every(
+            task =>
+              task.completed
+          )
+
+            ? "All tasks completed"
+
+            : `${tasks.filter(
+                task =>
+                  task.completed
+              ).length}/${tasks.length} completed · Incomplete`;
+
+      }
+
+
+      const row =
+        document.createElement(
+          "div"
+        );
+
+
+      row.className =
+        "weekly-history-row";
+
+
+      row.innerHTML = `
+        <span class="weekly-history-date">
+          ${escapeHtml(
+            date.toLocaleDateString(
+              "en-IN",
+              {
+                weekday: "long",
+                day: "numeric",
+                month: "short",
+                year: "numeric"
+              }
+            )
+          )}
+        </span>
+
+        <span class="weekly-history-value">
+          ${escapeHtml(value)}
+        </span>
+      `;
+
+
+      container.appendChild(row);
+
+    }
+  );
+
+}
+
+
+// =========================================================
+// STUDY GRAPH
+// =========================================================
+
+function renderStudyChart(
+  keys
+) {
+
+  const canvas =
+    $("studyChart");
+
+
+  const empty =
+    $("studyChartEmpty");
+
+
+  if (!canvas) return;
+
+
+  const now =
+    new Date();
+
+
+  const values =
+    keys.map(key => {
+
+      const date =
+        dateFromKey(key);
+
+
+      if (date > now) {
+
+        return null;
+
+      }
+
+
+      const seconds =
+        getStudySeconds(key);
+
+
+      return seconds > 0
+        ? seconds / 60
+        : null;
+
+    });
+
+
+  const hasData =
+    values.some(
+      value =>
+        value !== null &&
+        value > 0
+    );
+
+
+  empty?.classList.toggle(
+    "hidden",
+    hasData
+  );
+
+
+  canvas.style.display =
+    hasData
+      ? "block"
+      : "none";
+
+
+  if (!hasData) return;
+
+
+  const rect =
+    canvas.getBoundingClientRect();
+
+
+  const width =
+    Math.max(
+      300,
+      Math.floor(
+        rect.width || 700
+      )
+    );
+
+
+  const height =
+    320;
+
+
+  const ratio =
+    window.devicePixelRatio || 1;
+
+
+  canvas.width =
+    width * ratio;
+
+
+  canvas.height =
+    height * ratio;
+
+
+  const context =
+    canvas.getContext("2d");
+
+
+  context.setTransform(
+    ratio,
+    0,
+    0,
+    ratio,
+    0,
+    0
+  );
+
+
+  context.clearRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+
+  const padding = {
+
+    left: 52,
+
+    right: 20,
+
+    top: 20,
+
+    bottom: 50
+
+  };
+
+
+  const plotWidth =
+    width -
+    padding.left -
+    padding.right;
+
+
+  const plotHeight =
+    height -
+    padding.top -
+    padding.bottom;
+
+
+  const numericValues =
+    values.filter(
+      value =>
+        value !== null &&
+        value > 0
+    );
+
+
+  const maximum =
+    Math.max(
+      1,
+      Math.ceil(
+        Math.max(
+          ...numericValues
+        ) * 1.2
+      )
+    );
+
+
+  context.font =
+    "12px system-ui, sans-serif";
+
+
+  context.textAlign =
+    "right";
+
+
+  context.textBaseline =
+    "middle";
+
+
+  context.strokeStyle =
+    "#e2e5e8";
+
+
+  context.fillStyle =
+    "#70757b";
+
+
+  context.lineWidth =
+    1;
+
+
+  // Horizontal grid
+
+  for (
+    let i = 0;
+    i <= 4;
+    i++
+  ) {
+
+    const y =
+      padding.top +
+      plotHeight -
+      plotHeight *
+        i /
+        4;
+
+
+    context.beginPath();
+
+    context.moveTo(
+      padding.left,
+      y
+    );
+
+    context.lineTo(
+      width -
+        padding.right,
+      y
+    );
+
+    context.stroke();
+
+
+    const label =
+      Math.round(
+        maximum *
+        i /
+        4
+      );
+
+
+    context.fillText(
+      `${label}`,
+      padding.left - 9,
+      y
+    );
+
+  }
+
+
+  // Y-axis label
+
+  context.save();
+
+  context.translate(
+    15,
+    padding.top +
+      plotHeight / 2
+  );
+
+  context.rotate(
+    -Math.PI / 2
+  );
+
+  context.textAlign =
+    "center";
+
+  context.textBaseline =
+    "middle";
+
+  context.fillStyle =
+    "#70757b";
+
+  context.fillText(
+    "Minutes",
+    0,
+    0
+  );
+
+  context.restore();
+
+
+  // X-axis labels
+
+  context.textAlign =
+    "center";
+
+  context.textBaseline =
+    "top";
+
+
+  keys.forEach(
+    (key, index) => {
+
+      const x =
+        padding.left +
+        (
+          keys.length === 1
+            ? plotWidth / 2
+            : plotWidth *
+              index /
+              (keys.length - 1)
+        );
+
+
+      const date =
+        dateFromKey(key);
+
+
+      context.fillStyle =
+        "#70757b";
+
+
+      context.fillText(
+        date.toLocaleDateString(
+          "en-IN",
+          {
+            weekday: "short",
+            day: "numeric"
+          }
+        ),
+        x,
+        height -
+          padding.bottom +
+          13
+      );
+
+    }
+  );
+
+
+  // Draw separate line segments.
+  // Missing days remain empty and do not create fake zero values.
+
+  context.strokeStyle =
+    "#15803d";
+
+  context.lineWidth =
+    3;
+
+
+  let segmentOpen =
+    false;
+
+
+  values.forEach(
+    (value, index) => {
+
+      if (
+        value === null ||
+        value <= 0
+      ) {
+
+        segmentOpen =
+          false;
+
+        return;
+
+      }
+
+
+      const x =
+        padding.left +
+        (
+          keys.length === 1
+            ? plotWidth / 2
+            : plotWidth *
+              index /
+              (keys.length - 1)
+        );
+
+
+      const y =
+        padding.top +
+        plotHeight -
+        (
+          value /
+          maximum
+        ) *
+        plotHeight;
+
+
+      if (!segmentOpen) {
+
+        context.beginPath();
+
+        context.moveTo(
+          x,
+          y
+        );
+
+        segmentOpen =
+          true;
+
+      }
+
+      else {
+
+        context.lineTo(
+          x,
+          y
+        );
+
+      }
+
+
+      context.stroke();
+
+    }
+  );
+
+
+  // Points
+
+  values.forEach(
+    (value, index) => {
+
+      if (
+        value === null ||
+        value <= 0
+      ) {
+        return;
+      }
+
+
+      const x =
+        padding.left +
+        (
+          keys.length === 1
+            ? plotWidth / 2
+            : plotWidth *
+              index /
+              (keys.length - 1)
+        );
+
+
+      const y =
+        padding.top +
+        plotHeight -
+        (
+          value /
+          maximum
+        ) *
+        plotHeight;
+
+
+      context.beginPath();
+
+
+      context.arc(
+        x,
+        y,
+        5,
+        0,
+        Math.PI * 2
+      );
+
+
+      context.fillStyle =
+        "#15803d";
+
+
+      context.fill();
+
+
+      context.beginPath();
+
+
+      context.arc(
+        x,
+        y,
+        8,
+        0,
+        Math.PI * 2
+      );
+
+
+      context.strokeStyle =
+        "#15803d";
+
+
+      context.lineWidth =
+        1;
+
+
+      context.stroke();
+
+    }
+  );
+
+}
+
+
+// =========================================================
+// STUDY TIME STORAGE
+// =========================================================
+
+function addStudySeconds(
+  seconds
+) {
+
+  seconds =
+    Math.max(
+      0,
+      Math.round(seconds)
+    );
+
+
+  if (!seconds) return;
+
+
+  const date =
+    todayKey();
+
+
+  data.studyByDate[date] =
+    getStudySeconds(date) +
+    seconds;
+
+
+  save();
+
+
+  updateMainUI();
+
+}
+
+
+// =========================================================
+// TIMER DISPLAY
+// =========================================================
+
+function updateTimerDisplay() {
+
+  let displayMs =
+    timer.elapsedMs;
+
+
+  if (
+    timer.mode ===
+    "countdown"
+  ) {
+
+    displayMs =
+      timer.countdownRemainingMs;
+
+  }
+
+
+  if (
+    timer.running &&
+    timer.startedAt !== null
+  ) {
+
+    const delta =
+      Date.now() -
+      timer.startedAt;
+
+
+    if (
+      timer.mode ===
+      "countdown"
+    ) {
+
+      displayMs =
+        Math.max(
+          0,
+          timer.countdownRemainingMs -
+          delta
+        );
+
+    }
+
+    else {
+
+      displayMs =
+        timer.elapsedMs +
+        delta;
+
+    }
+
+  }
+
+
+  const second =
+    Math.floor(
+      displayMs / 1000
+    );
+
+
+  if (
+    second !==
+    timer.lastDisplaySecond
+  ) {
+
+    timer.lastDisplaySecond =
+      second;
+
+
+    if ($("timerDisplay")) {
+
+      $("timerDisplay").textContent =
+        formatClock(
+          displayMs
+        );
+
+    }
+
+  }
+
+}
+
+
+// =========================================================
+// TIMER STATE UPDATE
+// =========================================================
+
+function updateTimerState() {
+
+  if (
+    !timer.running ||
+    timer.startedAt === null
+  ) {
+
+    return;
+
+  }
+
+
+  const now =
+    Date.now();
+
+
+  const delta =
+    now -
+    timer.startedAt;
+
+
+  if (
+    timer.mode ===
+    "stopwatch"
+  ) {
+
+    timer.elapsedMs +=
+      delta;
+
+
+    timer.startedAt =
+      now;
+
+  }
+
+
+  else {
+
+    timer.countdownRemainingMs -=
+      delta;
+
+
+    timer.startedAt =
+      now;
+
+
+    timer.elapsedMs =
+      timer.countdownDurationMs -
+      timer.countdownRemainingMs;
+
+
+    if (
+      timer.countdownRemainingMs <=
+      0
+    ) {
+
+      timer.countdownRemainingMs =
+        0;
+
+
+      timer.elapsedMs =
+        timer.countdownDurationMs;
+
+
+      timer.running =
+        false;
+
+
+      timer.startedAt =
+        null;
+
+
+      saveTimerStudyDelta();
+
+
+      timer.savedMs =
+        0;
+
+
+      updateTimerDisplay();
+
+
+      showTimerEnded();
+
+
+      return;
+
+    }
+
+  }
+
+
+  saveTimerStudyDelta(
+    false
+  );
+
+
+  updateTimerDisplay();
+
+}
+
+
+// =========================================================
+// SAVE TIMER STUDY DELTA
+// =========================================================
+
+function saveTimerStudyDelta(
+  resetSaved = false
+) {
+
+  const current =
+    timer.elapsedMs;
+
+
+  const unsaved =
+    Math.max(
+      0,
+      current -
+      timer.savedMs
+    );
+
+
+  if (
+    unsaved >= 1000
+  ) {
+
+    addStudySeconds(
+      Math.floor(
+        unsaved / 1000
+      )
+    );
+
+  }
+
+
+  timer.savedMs =
+    resetSaved
+      ? 0
+      : current;
+
+}
+
+
+// =========================================================
+// TIMER MODE
+// =========================================================
+
+function selectTimerMode(
+  mode
+) {
+
+  if (timer.running) {
+
+    updateTimerState();
+
+
+    timer.running =
+      false;
+
+
+    timer.startedAt =
+      null;
+
+
+    saveTimerStudyDelta();
+
+  }
+
+
+  timer.mode =
+    mode;
+
+
+  timer.elapsedMs =
+    0;
+
+
+  timer.savedMs =
+    0;
+
+
+  timer.countdownDurationMs =
+    0;
+
+
+  timer.countdownRemainingMs =
+    0;
+
+
+  timer.lastDisplaySecond =
+    -1;
+
+
+  $("stopwatchMode")
+    ?.classList.toggle(
+      "active",
+      mode === "stopwatch"
+    );
+
+
+  $("countdownMode")
+    ?.classList.toggle(
+      "active",
+      mode === "countdown"
+    );
+
+
+  $("countdownInput")
+    ?.classList.toggle(
+      "hidden",
+      mode !== "countdown"
+    );
+
+
+  if ($("timerDisplay")) {
+
+    $("timerDisplay").textContent =
+      "00:00:00";
+
+  }
+
+}
+
+
+// =========================================================
+// START TIMER
+// =========================================================
+
+function startStudyTimer() {
+
+  if (timer.running) {
+    return;
+  }
+
+
+  if (
+    timer.mode ===
+    "countdown"
+  ) {
+
+    if (
+      timer.countdownRemainingMs <=
+      0
+    ) {
+
+      const minutes =
+        Number(
+          $("countdownMinutes")
+            ?.value ||
+          0
+        );
+
+
+      if (
+        !Number.isFinite(minutes) ||
+        minutes <= 0
+      ) {
+
+        alert(
+          "Enter a countdown time in minutes."
+        );
+
+        return;
+
+      }
+
+
+      timer.countdownDurationMs =
+        Math.round(
+          minutes *
+          60 *
+          1000
+        );
+
+
+      timer.countdownRemainingMs =
+        timer.countdownDurationMs;
+
+
+      timer.elapsedMs =
+        0;
+
+
+      timer.savedMs =
+        0;
+
+    }
+
+  }
+
+
+  timer.running =
+    true;
+
+
+  timer.startedAt =
+    Date.now();
+
+
+  timer.lastDisplaySecond =
+    -1;
+
+
+  updateTimerDisplay();
+
+}
+
+
+// =========================================================
+// PAUSE TIMER
+// =========================================================
+
+function pauseStudyTimer() {
+
+  if (!timer.running) {
+    return;
+  }
+
+
+  updateTimerState();
+
+
+  if (timer.running) {
+
+    timer.running =
+      false;
+
+
+    timer.startedAt =
+      null;
+
+  }
+
+
+  saveTimerStudyDelta();
+
+
+  updateTimerDisplay();
+
+  updateMainUI();
+
+}
+
+
+// =========================================================
+// RESET TIMER
+// =========================================================
+
+function resetStudyTimer() {
+
+  if (timer.running) {
+
+    updateTimerState();
+
+  }
+
+
+  saveTimerStudyDelta();
+
+
+  timer.running =
+    false;
+
+
+  timer.startedAt =
+    null;
+
+
+  timer.elapsedMs =
+    0;
+
+
+  timer.savedMs =
+    0;
+
+
+  timer.countdownDurationMs =
+    0;
+
+
+  timer.countdownRemainingMs =
+    0;
+
+
+  timer.lastDisplaySecond =
+    -1;
+
+
+  if ($("timerDisplay")) {
+
+    $("timerDisplay").textContent =
+      "00:00:00";
+
+  }
+
+
+  updateMainUI();
+
+}
+
+
+// =========================================================
+// MANUAL STUDY TIME
+// =========================================================
+
+function saveManualStudyTime() {
+
+  const minutes =
+    Number(
+      $("manualStudyTime")
+        ?.value ||
+      0
+    );
+
+
+  if (
+    !Number.isFinite(minutes) ||
+    minutes <= 0
+  ) {
+
+    alert(
+      "Enter a study time greater than 0 minutes."
+    );
+
+    return;
+
+  }
+
+
+  addStudySeconds(
+    Math.round(
+      minutes *
+      60
+    )
+  );
+
+
+  $("manualStudyTime").value =
+    "";
+
+}
+
+
+// =========================================================
+// TIMER ENDED
+// =========================================================
+
+function showTimerEnded() {
+
+  $("timerEndedReminder")
+    ?.classList.remove(
+      "hidden"
+    );
+
+
+  playAlarm();
+
+
+  sendNotification(
+    "Timer Ended",
+    "Your countdown timer has reached 00:00."
+  );
+
+}
+
+
+function playAlarm() {
+
+  try {
+
+    const AudioContextClass =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+
+    if (!AudioContextClass) {
+      return;
+    }
+
+
+    const context =
+      new AudioContextClass();
+
+
+    const oscillator =
+      context.createOscillator();
+
+
+    const gain =
+      context.createGain();
+
+
+    oscillator.frequency.value =
+      800;
+
+
+    gain.gain.setValueAtTime(
+      0.15,
+      context.currentTime
+    );
+
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.001,
+      context.currentTime +
+      0.8
+    );
+
+
+    oscillator.connect(
+      gain
+    );
+
+
+    gain.connect(
+      context.destination
+    );
+
+
+    oscillator.start();
+
+
+    oscillator.stop(
+      context.currentTime +
+      0.8
+    );
+
+  }
+
+  catch (_) {}
+
+}
+
+
+// =========================================================
+// NOTIFICATIONS
+// =========================================================
 
 async function enableNotifications() {
 
-  if (!("Notification" in window)) {
+  if (
+    !("Notification" in window)
+  ) {
 
     alert(
       "This browser does not support notifications."
     );
 
     return;
+
   }
 
 
@@ -1837,708 +3635,904 @@ async function enableNotifications() {
       await Notification.requestPermission();
 
 
-    if (permission === "granted") {
+    if (
+      permission ===
+      "granted"
+    ) {
 
-      data.notificationsEnabled = true;
-
-      saveData();
-
-      if ($("notificationBtn")) {
-
-        $("notificationBtn").textContent =
-          "✓ Notifications Enabled";
-      }
+      updateNotificationButton();
 
 
-      new Notification("Daily Target", {
-        body:
-          "Notifications are now enabled."
-      });
-
-    } else {
-
-      data.notificationsEnabled = false;
-
-      saveData();
-
-      alert(
-        "Notifications were not enabled. Check your browser's site notification permission."
+      sendNotification(
+        "Daily Target",
+        "Notifications are enabled."
       );
+
     }
 
-  } catch (error) {
+
+    else if (
+      permission ===
+      "denied"
+    ) {
+
+      alert(
+        "Notifications are blocked for this site. Open Chrome site settings and allow Notifications for this website."
+      );
+
+
+      updateNotificationButton();
+
+    }
+
+
+    else {
+
+      alert(
+        "Notification permission was not granted."
+      );
+
+    }
+
+  }
+
+  catch (error) {
 
     console.error(
-      "Notification error:",
       error
     );
 
+
     alert(
-      "Could not enable notifications."
+      "Notification permission could not be requested in this browser."
     );
+
   }
+
 }
 
 
-function sendNotification(task) {
+function updateNotificationButton() {
+
+  const button =
+    $("notificationBtn");
+
+
+  if (!button) return;
+
+
+  if (
+    !("Notification" in window)
+  ) {
+
+    button.textContent =
+      "Notifications Not Supported";
+
+    return;
+
+  }
+
+
+  button.textContent =
+    Notification.permission ===
+    "granted"
+
+      ? "✓ Notifications Enabled"
+
+      : "Enable Notifications";
+
+}
+
+
+function sendNotification(
+  title,
+  body
+) {
 
   if (
     !("Notification" in window) ||
-    Notification.permission !== "granted"
+    Notification.permission !==
+      "granted"
   ) {
+
     return;
+
   }
 
 
-  const notification =
+  try {
+
     new Notification(
-      "⏰ Daily Target Reminder",
+      title,
       {
-        body:
-          `${task.name}\nTime: ${formatTime(task.time)}`,
-        tag:
-          `daily-target-${task.id}`,
-        renotify: true
+        body
       }
     );
 
-
-  notification.onclick = () => {
-
-    window.focus();
-
-    openRegularPlanner(task.date);
-
-    notification.close();
-  };
-}
-
-
-
-/* =========================
-   REMINDER MODAL
-   ========================= */
-
-let activeReminderTaskId = null;
-
-
-function showReminder(task) {
-
-  if (!task) return;
-
-
-  activeReminderTaskId =
-    task.id;
-
-
-  if ($("reminderText")) {
-
-    $("reminderText").innerHTML =
-      `<strong>${escapeHTML(task.name)}</strong><br>
-       Scheduled for ${formatTime(task.time)}`;
   }
 
+  catch (error) {
 
-  show($("reminder"));
-}
-
-
-function closeReminder() {
-
-  activeReminderTaskId = null;
-
-  hide($("reminder"));
-}
-
-
-function completeReminderTask() {
-
-  if (!activeReminderTaskId) return;
-
-
-  const task =
-    data.tasks.find(
-      item =>
-        item.id === activeReminderTaskId
+    console.log(
+      "Notification unavailable",
+      error
     );
 
-
-  if (task) {
-
-    task.completed = true;
-
-    task.snoozeUntil = null;
-
-    saveData();
-
-    updateRecordForToday();
-
-    updateAll();
   }
 
-
-  closeReminder();
 }
 
 
-function remindLater() {
+// =========================================================
+// SCHEDULED TASK NOTIFICATIONS
+// =========================================================
 
-  if (!activeReminderTaskId) return;
+function notificationKey(
+  type,
+  id,
+  date,
+  time
+) {
 
+  return `${type}_${id}_${date}_${time}`;
 
-  const task =
-    data.tasks.find(
-      item =>
-        item.id === activeReminderTaskId
-    );
-
-
-  if (task) {
-
-    task.snoozeUntil =
-      Date.now() +
-      60 * 60 * 1000;
-
-    saveData();
-  }
-
-
-  closeReminder();
 }
 
 
-
-/* =========================
-   REMINDER CHECKER
-   ========================= */
-
-function startReminderChecker() {
-
-  checkTargetTimes();
-
-  setInterval(
-    checkTargetTimes,
-    10000
-  );
-}
-
-
-function checkTargetTimes() {
+function checkScheduledNotifications() {
 
   const now =
     new Date();
 
 
-  const today =
-    getTodayKey();
+  const date =
+    todayKey();
 
 
-  const todayTasks =
-    data.tasks.filter(
-      task =>
-        task.date === today &&
-        !task.completed
+  const time =
+    `${String(
+      now.getHours()
+    ).padStart(2, "0")}:${String(
+      now.getMinutes()
+    ).padStart(2, "0")}`;
+
+
+  // Regular tasks
+
+  const tasks =
+    getTasks(date);
+
+
+  tasks.forEach(
+    task => {
+
+      if (
+        !task.completed &&
+        task.time === time
+      ) {
+
+        const key =
+          notificationKey(
+            "task",
+            task.id,
+            date,
+            time
+          );
+
+
+        if (
+          !data.notified[key]
+        ) {
+
+          data.notified[key] =
+            true;
+
+
+          save();
+
+
+          showScheduledReminder(
+            task.id,
+            task.name,
+            task.time
+          );
+
+        }
+
+      }
+
+    }
+  );
+
+
+  // Fixed targets
+
+  data.fixedTargets.forEach(
+    target => {
+
+      if (
+        !target.completed &&
+        target.time === time
+      ) {
+
+        const key =
+          notificationKey(
+            "fixed",
+            target.id,
+            date,
+            time
+          );
+
+
+        if (
+          !data.notified[key]
+        ) {
+
+          data.notified[key] =
+            true;
+
+
+          save();
+
+
+          showScheduledReminder(
+            target.id,
+            target.name,
+            target.time
+          );
+
+        }
+
+      }
+
+    }
+  );
+
+}
+
+
+function showScheduledReminder(
+  id,
+  name,
+  time
+) {
+
+  if ($("reminderText")) {
+
+    $("reminderText").textContent =
+      `Time to complete the task: ${name} (${formatTime(time)}).`;
+
+  }
+
+
+  $("reminder")
+    ?.classList.remove(
+      "hidden"
     );
 
 
-  todayTasks.forEach(task => {
-
-    if (!task.time) return;
+  playAlarm();
 
 
-    const scheduled =
-      getDateTime(
-        task.date,
-        task.time
-      );
+  sendNotification(
+    "Time to complete the task",
+    `${name} — ${formatTime(time)}`
+  );
 
 
-    if (!scheduled) return;
+  if (reminderTimer) {
+
+    clearTimeout(
+      reminderTimer
+    );
+
+  }
 
 
-    /*
-      Reminder can trigger from the exact task time
-      until one hour after it.
-    */
-
-    const difference =
-      now.getTime() -
-      scheduled.getTime();
+  reminderTimer =
+    null;
 
 
-    const withinReminderWindow =
-      difference >= 0 &&
-      difference <= 60 * 60 * 1000;
+  $("reminderComplete")
+    ?.setAttribute(
+      "data-reminder-id",
+      id
+    );
 
-
-    if (!withinReminderWindow) {
-      return;
-    }
-
-
-    if (
-      task.snoozeUntil &&
-      Date.now() < task.snoozeUntil
-    ) {
-      return;
-    }
-
-
-    /*
-      Prevent the same task from producing
-      the same notification repeatedly.
-    */
-
-    const reminderKey =
-      `${task.date}_${task.time}`;
-
-
-    if (
-      task.lastNotified === reminderKey
-    ) {
-      return;
-    }
-
-
-    task.lastNotified =
-      reminderKey;
-
-
-    saveData();
-
-
-    sendNotification(task);
-
-    showReminder(task);
-  });
 }
 
 
-
-/* =========================
-   BUTTONS & EVENT LISTENERS
-   ========================= */
-
-function setupButtons() {
-
-  /*
-    Regular target
-  */
-
-  if ($("openRegularTarget")) {
-
-    $("openRegularTarget")
-      .addEventListener(
-        "click",
-        event => {
-          event.stopPropagation();
-          openRegularPlanner();
-        }
-      );
-  }
-
-
-  if ($("editDaily")) {
-
-    $("editDaily")
-      .addEventListener(
-        "click",
-        event => {
-          event.stopPropagation();
-          openRegularPlanner();
-        }
-      );
-  }
-
-
-  if ($("regularTargetCard")) {
-
-    $("regularTargetCard")
-      .addEventListener(
-        "click",
-        event => {
-
-          if (
-            event.target.closest("button") ||
-            event.target.closest("input")
-          ) {
-            return;
-          }
-
-          openRegularPlanner();
-        }
-      );
-  }
-
-
-  /*
-    Complete all
-  */
-
-  if ($("dailyComplete")) {
-
-    $("dailyComplete")
-      .addEventListener(
-        "click",
-        event => {
-          event.stopPropagation();
-          completeAllTodayTasks();
-        }
-      );
-  }
-
-
-  /*
-    Planner close
-  */
-
-  if ($("closeRegularPlanner")) {
-
-    $("closeRegularPlanner")
-      .addEventListener(
-        "click",
-        closeRegularPlanner
-      );
-  }
-
-
-  /*
-    Planner date
-  */
-
-  if ($("plannerDate")) {
-
-    $("plannerDate")
-      .addEventListener(
-        "change",
-        event => {
-
-          plannerDate =
-            event.target.value ||
-            getTodayKey();
-
-          renderPlannerTasks();
-        }
-      );
-  }
-
-
-  /*
-    Add task
-  */
-
-  if ($("addTaskBtn")) {
-
-    $("addTaskBtn")
-      .addEventListener(
-        "click",
-        openTaskModal
-      );
-  }
-
-
-  /*
-    Task modal close
-  */
-
-  if ($("closeTaskModal")) {
-
-    $("closeTaskModal")
-      .addEventListener(
-        "click",
-        closeTaskModal
-      );
-  }
-
-
-  /*
-    Save task
-  */
-
-  if ($("saveTaskBtn")) {
-
-    $("saveTaskBtn")
-      .addEventListener(
-        "click",
-        saveTask
-      );
-  }
-
-
-  /*
-    Task checkbox/delete
-  */
-
-  if ($("regularTasksList")) {
-
-    $("regularTasksList")
-      .addEventListener(
-        "change",
-        event => {
-
-          if (
-            event.target.classList.contains(
-              "planner-task-checkbox"
-            )
-          ) {
-
-            const id =
-              event.target.dataset.taskId;
-
-            toggleTask(
-              id,
-              event.target.checked
-            );
-          }
-        }
-      );
-
-
-    $("regularTasksList")
-      .addEventListener(
-        "click",
-        event => {
-
-          const button =
-            event.target.closest(
-              "[data-delete-task]"
-            );
-
-          if (!button) return;
-
-          deleteTask(
-            button.dataset.deleteTask
-          );
-        }
-      );
-  }
-
-
-  /*
-    Save planner
-  */
-
-  if ($("saveRegularPlan")) {
-
-    $("saveRegularPlan")
-      .addEventListener(
-        "click",
-        () => {
-
-          saveData();
-
-          updateRecordForToday();
-
-          updateAll();
-
-          closeRegularPlanner();
-        }
-      );
-  }
-
-
-  /*
-    Fixed target
-  */
-
-  if ($("editFixed")) {
-
-    $("editFixed")
-      .addEventListener(
-        "click",
-        openFixedTargetModal
-      );
-  }
-
-
-  if ($("fixedComplete")) {
-
-    $("fixedComplete")
-      .addEventListener(
-        "click",
-        completeFixedTarget
-      );
-  }
-
-
-  /*
-    Old modal
-  */
-
-  if ($("closeModal")) {
-
-    $("closeModal")
-      .addEventListener(
-        "click",
-        closeMainModal
-      );
-  }
-
-
-  if ($("saveTarget")) {
-
-    $("saveTarget")
-      .addEventListener(
-        "click",
-        saveFixedTarget
-      );
-  }
-
-
-  /*
-    Study modes
-  */
-
-  if ($("stopwatchMode")) {
-
-    $("stopwatchMode")
-      .addEventListener(
-        "click",
-        () => setTimerMode("stopwatch")
-      );
-  }
-
-
-  if ($("countdownMode")) {
-
-    $("countdownMode")
-      .addEventListener(
-        "click",
-        () => setTimerMode("countdown")
-      );
-  }
-
-
-  /*
-    Study timer controls
-  */
-
-  if ($("startStudyTimer")) {
-
-    $("startStudyTimer")
-      .addEventListener(
-        "click",
-        startStudyTimer
-      );
-  }
-
-
-  if ($("pauseStudyTimer")) {
-
-    $("pauseStudyTimer")
-      .addEventListener(
-        "click",
-        pauseStudyTimer
-      );
-  }
-
-
-  if ($("resetStudyTimer")) {
-
-    $("resetStudyTimer")
-      .addEventListener(
-        "click",
-        resetStudyTimer
-      );
-  }
-
-
-  if ($("saveManualStudyTime")) {
-
-    $("saveManualStudyTime")
-      .addEventListener(
-        "click",
-        saveManualStudyTime
-      );
-  }
-
-
-  /*
-    Notifications
-  */
-
-  if ($("notificationBtn")) {
-
-    $("notificationBtn")
-      .addEventListener(
-        "click",
-        enableNotifications
-      );
-  }
-
-
-  /*
-    Reminder buttons
-  */
-
-  if ($("reminderComplete")) {
-
-    $("reminderComplete")
-      .addEventListener(
-        "click",
-        completeReminderTask
-      );
-  }
-
-
-  if ($("remindLater")) {
-
-    $("remindLater")
-      .addEventListener(
-        "click",
-        remindLater
-      );
-  }
-}
-
-
-
-/* =========================
-   SECURITY / TEXT HELPERS
-   ========================= */
-
-function escapeHTML(text) {
-
-  if (text === null || text === undefined) {
-    return "";
-  }
-
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-
-
-/* =========================
-   INITIAL NOTIFICATION BUTTON
-   ========================= */
-
-function updateNotificationButton() {
-
-  if (!$("notificationBtn")) return;
-
+// =========================================================
+// REMINDER CONTROLS
+// =========================================================
+
+function stopReminderForTask(
+  id
+) {
 
   if (
-    "Notification" in window &&
-    Notification.permission === "granted"
+    $("reminderComplete")
+      ?.getAttribute(
+        "data-reminder-id"
+      ) === id
   ) {
 
-    $("notificationBtn").textContent =
-      "✓ Notifications Enabled";
+    $("reminder")
+      ?.classList.add(
+        "hidden"
+      );
 
-  } else {
 
-    $("notificationBtn").textContent =
-      "Enable Notifications";
+    if (reminderTimer) {
+
+      clearTimeout(
+        reminderTimer
+      );
+
+    }
+
+
+    reminderTimer =
+      null;
+
   }
+
 }
 
 
-setTimeout(
-  updateNotificationButton,
-  100
+function completeReminderTarget() {
+
+  const id =
+    $("reminderComplete")
+      ?.getAttribute(
+        "data-reminder-id"
+      );
+
+
+  if (!id) return;
+
+
+  const date =
+    todayKey();
+
+
+  const task =
+    getTasks(date).find(
+      item =>
+        item.id === id
+    );
+
+
+  if (task) {
+
+    task.completed =
+      true;
+
+
+    setTasks(
+      date,
+      getTasks(date)
+    );
+
+  }
+
+  else {
+
+    const fixed =
+      data.fixedTargets.find(
+        item =>
+          item.id === id
+      );
+
+
+    if (fixed) {
+
+      fixed.completed =
+        true;
+
+
+      fixed.completedDate =
+        todayKey();
+
+    }
+
+  }
+
+
+  updateDayCompletion(
+    date
+  );
+
+
+  $("reminder")
+    ?.classList.add(
+      "hidden"
+    );
+
+
+  updateMainUI();
+
+  renderRegularTasks();
+
+  renderFixedTargets();
+
+}
+
+
+function remindLater() {
+
+  $("reminder")
+    ?.classList.add(
+      "hidden"
+    );
+
+
+  const id =
+    $("reminderComplete")
+      ?.getAttribute(
+        "data-reminder-id"
+      );
+
+
+  if (!id) return;
+
+
+  if (reminderTimer) {
+
+    clearTimeout(
+      reminderTimer
+    );
+
+  }
+
+
+  reminderTimer =
+    setTimeout(
+      () => {
+
+        const task =
+          getTasks(
+            todayKey()
+          ).find(
+            item =>
+              item.id === id
+          );
+
+
+        const fixed =
+          data.fixedTargets.find(
+            item =>
+              item.id === id
+          );
+
+
+        const target =
+          task ||
+          fixed;
+
+
+        if (
+          target &&
+          !target.completed
+        ) {
+
+          showScheduledReminder(
+            id,
+            target.name,
+            target.time
+          );
+
+        }
+
+      },
+      60 * 60 * 1000
+    );
+
+}
+
+
+// =========================================================
+// EVENT BINDING
+// =========================================================
+
+function bindEvents() {
+
+  // Regular target
+
+  $("openRegularTarget")
+    ?.addEventListener(
+      "click",
+      openRegularTasks
+    );
+
+
+  $("editDaily")
+    ?.addEventListener(
+      "click",
+      openPlanner
+    );
+
+
+  $("completeAllRegular")
+    ?.addEventListener(
+      "click",
+      completeAllRegular
+    );
+
+
+  $("completeAllRegularFromView")
+    ?.addEventListener(
+      "click",
+      completeAllRegular
+    );
+
+
+  // Interfaces
+
+  $("closeRegularTasks")
+    ?.addEventListener(
+      "click",
+      closeAllViews
+    );
+
+
+  $("closeRegularPlanner")
+    ?.addEventListener(
+      "click",
+      closeAllViews
+    );
+
+
+  $("closeFixedTargets")
+    ?.addEventListener(
+      "click",
+      closeAllViews
+    );
+
+
+  $("closeWeeklyStats")
+    ?.addEventListener(
+      "click",
+      closeAllViews
+    );
+
+
+  // Tasks
+
+  $("addTaskBtn")
+    ?.addEventListener(
+      "click",
+      () =>
+        openTaskModal(
+          todayKey()
+        )
+    );
+
+
+  $("addTaskFromPlanner")
+    ?.addEventListener(
+      "click",
+      () =>
+        openTaskModal(
+          plannerDate
+        )
+    );
+
+
+  $("saveTaskBtn")
+    ?.addEventListener(
+      "click",
+      saveTask
+    );
+
+
+  $("closeTaskModal")
+    ?.addEventListener(
+      "click",
+      closeTaskModal
+    );
+
+
+  $("plannerDate")
+    ?.addEventListener(
+      "change",
+      renderPlanner
+    );
+
+
+  $("saveRegularPlan")
+    ?.addEventListener(
+      "click",
+      () => {
+
+        save();
+
+        updateMainUI();
+
+        closeAllViews();
+
+      }
+    );
+
+
+  // Fixed targets
+
+  $("openFixedTargets")
+    ?.addEventListener(
+      "click",
+      openFixedTargets
+    );
+
+
+  $("addFixedTarget")
+    ?.addEventListener(
+      "click",
+      () =>
+        openTargetModal(
+          "fixed"
+        )
+    );
+
+
+  $("saveTarget")
+    ?.addEventListener(
+      "click",
+      saveTarget
+    );
+
+
+  $("closeModal")
+    ?.addEventListener(
+      "click",
+      closeModal
+    );
+
+
+  // Weekly statistics
+
+  $("openWeeklyStats")
+    ?.addEventListener(
+      "click",
+      openWeeklyStats
+    );
+
+
+  // Timer
+
+  $("stopwatchMode")
+    ?.addEventListener(
+      "click",
+      () =>
+        selectTimerMode(
+          "stopwatch"
+        )
+    );
+
+
+  $("countdownMode")
+    ?.addEventListener(
+      "click",
+      () =>
+        selectTimerMode(
+          "countdown"
+        )
+    );
+
+
+  $("startStudyTimer")
+    ?.addEventListener(
+      "click",
+      startStudyTimer
+    );
+
+
+  $("pauseStudyTimer")
+    ?.addEventListener(
+      "click",
+      pauseStudyTimer
+    );
+
+
+  $("resetStudyTimer")
+    ?.addEventListener(
+      "click",
+      resetStudyTimer
+    );
+
+
+  $("saveManualStudyTime")
+    ?.addEventListener(
+      "click",
+      saveManualStudyTime
+    );
+
+
+  // Notifications
+
+  $("notificationBtn")
+    ?.addEventListener(
+      "click",
+      enableNotifications
+    );
+
+
+  $("reminderComplete")
+    ?.addEventListener(
+      "click",
+      completeReminderTarget
+    );
+
+
+  $("remindLater")
+    ?.addEventListener(
+      "click",
+      remindLater
+    );
+
+
+  $("closeTimerEndedReminder")
+    ?.addEventListener(
+      "click",
+      () =>
+        $("timerEndedReminder")
+          ?.classList.add(
+            "hidden"
+          )
+    );
+
+
+  // Page visibility
+
+  document.addEventListener(
+    "visibilitychange",
+    () => {
+
+      if (!document.hidden) {
+
+        updateMainUI();
+
+        checkScheduledNotifications();
+
+        updateTimerDisplay();
+
+      }
+
+    }
+  );
+
+
+  // Graph resize
+
+  window.addEventListener(
+    "resize",
+    () => {
+
+      if (
+        !$("weeklyStatsView")
+          ?.classList.contains(
+            "hidden"
+          )
+      ) {
+
+        renderStudyChart(
+          getWeekKeys()
+        );
+
+      }
+
+    }
+  );
+
+}
+
+
+// =========================================================
+// CLEAN OLD NOTIFICATION RECORDS
+// =========================================================
+
+function cleanOldNotificationRecords() {
+
+  const cutoff =
+    new Date();
+
+
+  cutoff.setDate(
+    cutoff.getDate() - 14
+  );
+
+
+  for (
+    const key
+    of Object.keys(
+      data.notified
+    )
+  ) {
+
+    const parts =
+      key.split("_");
+
+
+    const date =
+      parts[parts.length - 2];
+
+
+    if (
+      /^\d{4}-\d{2}-\d{2}$/
+        .test(date) &&
+      dateFromKey(date) <
+        cutoff
+    ) {
+
+      delete data.notified[key];
+
+    }
+
+  }
+
+}
+
+
+// =========================================================
+// START APPLICATION
+// =========================================================
+
+function init() {
+
+  cleanOldNotificationRecords();
+
+
+  updateStreak();
+
+
+  save();
+
+
+  bindEvents();
+
+
+  selectTimerMode(
+    "stopwatch"
+  );
+
+
+  updateMainUI();
+
+
+  checkScheduledNotifications();
+
+
+  // Timer update
+
+  setInterval(
+    () => {
+
+      updateTimerState();
+
+    },
+    250
+  );
+
+
+  // Scheduled notifications
+
+  notificationCheckTimer =
+    setInterval(
+      checkScheduledNotifications,
+      1000
+    );
+
+
+  // Dashboard refresh
+
+  setInterval(
+    updateMainUI,
+    60000
+  );
+
+}
+
+
+document.addEventListener(
+  "DOMContentLoaded",
+  init
 );
