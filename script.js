@@ -2863,7 +2863,526 @@ function renderStudyChart(
         );
 
       }
+// =========================================================
+// STUDY TIMER — REPLACEMENT
+// =========================================================
 
+function addStudySeconds(seconds) {
+  seconds = Math.max(0, Math.floor(seconds));
+
+  if (!seconds) return;
+
+  const date = todayKey();
+
+  data.studyByDate[date] =
+    getStudySeconds(date) + seconds;
+
+  save();
+  updateMainUI();
+}
+
+
+// =========================================================
+// COUNTDOWN PICKER
+// =========================================================
+
+function createCountdownPicker() {
+  const container = $("countdownInput");
+
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:6px;
+      margin:10px 0;
+    ">
+      <select id="countdownHours">
+        ${Array.from({length: 24}, (_, i) =>
+          `<option value="${i}">${String(i).padStart(2,"0")}</option>`
+        ).join("")}
+      </select>
+
+      <span>:</span>
+
+      <select id="countdownMinutes">
+        ${Array.from({length: 60}, (_, i) =>
+          `<option value="${i}">${String(i).padStart(2,"0")}</option>`
+        ).join("")}
+      </select>
+
+      <span>:</span>
+
+      <select id="countdownSeconds">
+        ${Array.from({length: 60}, (_, i) =>
+          `<option value="${i}">${String(i).padStart(2,"0")}</option>`
+        ).join("")}
+      </select>
+    </div>
+
+    <div style="
+      display:flex;
+      justify-content:center;
+      gap:6px;
+      flex-wrap:wrap;
+    ">
+      <button type="button" data-preset="600">00:10:00</button>
+      <button type="button" data-preset="900">00:15:00</button>
+      <button type="button" data-preset="1800">00:30:00</button>
+    </div>
+  `;
+
+  container
+    .querySelectorAll("[data-preset]")
+    .forEach(button => {
+      button.addEventListener("click", () => {
+        setCountdownInputSeconds(
+          Number(button.dataset.preset)
+        );
+      });
+    });
+}
+
+
+function getCountdownInputSeconds() {
+  const hours =
+    Number($("countdownHours")?.value || 0);
+
+  const minutes =
+    Number($("countdownMinutes")?.value || 0);
+
+  const seconds =
+    Number($("countdownSeconds")?.value || 0);
+
+  return (
+    hours * 3600 +
+    minutes * 60 +
+    seconds
+  );
+}
+
+
+function setCountdownInputSeconds(totalSeconds) {
+  totalSeconds = Math.max(
+    0,
+    Math.floor(totalSeconds)
+  );
+
+  const hours =
+    Math.floor(totalSeconds / 3600);
+
+  const minutes =
+    Math.floor(
+      (totalSeconds % 3600) / 60
+    );
+
+  const seconds =
+    totalSeconds % 60;
+
+  if ($("countdownHours")) {
+    $("countdownHours").value =
+      String(hours);
+  }
+
+  if ($("countdownMinutes")) {
+    $("countdownMinutes").value =
+      String(minutes);
+  }
+
+  if ($("countdownSeconds")) {
+    $("countdownSeconds").value =
+      String(seconds);
+  }
+}
+
+
+// =========================================================
+// TIMER DISPLAY
+// =========================================================
+
+function getTimerDisplayMs() {
+  if (!timer.running) {
+    return timer.mode === "countdown"
+      ? timer.countdownRemainingMs
+      : timer.elapsedMs;
+  }
+
+  const delta =
+    Date.now() - timer.startedAt;
+
+  if (timer.mode === "countdown") {
+    return Math.max(
+      0,
+      timer.countdownRemainingMs - delta
+    );
+  }
+
+  return timer.elapsedMs + delta;
+}
+
+
+function updateTimerDisplay() {
+  const displayMs =
+    getTimerDisplayMs();
+
+  const second =
+    Math.floor(displayMs / 1000);
+
+  if (
+    second !==
+    timer.lastDisplaySecond
+  ) {
+    timer.lastDisplaySecond =
+      second;
+
+    if ($("timerDisplay")) {
+      $("timerDisplay").textContent =
+        formatClock(displayMs);
+    }
+  }
+}
+
+
+// =========================================================
+// SAVE TIMER STUDY TIME
+// =========================================================
+
+function saveTimerStudyDelta() {
+  const current =
+    timer.mode === "stopwatch"
+      ? timer.elapsedMs
+      : (
+          timer.countdownDurationMs -
+          timer.countdownRemainingMs
+        );
+
+  const deltaMs =
+    Math.max(
+      0,
+      current - timer.savedMs
+    );
+
+  const seconds =
+    Math.floor(deltaMs / 1000);
+
+  if (seconds > 0) {
+    addStudySeconds(seconds);
+
+    timer.savedMs +=
+      seconds * 1000;
+  }
+}
+
+
+// =========================================================
+// TIMER STATE UPDATE
+// =========================================================
+
+function updateTimerState() {
+  if (
+    !timer.running ||
+    timer.startedAt === null
+  ) {
+    updateTimerDisplay();
+    return;
+  }
+
+  const now = Date.now();
+
+  const delta =
+    now - timer.startedAt;
+
+  if (timer.mode === "stopwatch") {
+
+    timer.elapsedMs += delta;
+
+    timer.startedAt = now;
+
+  } else {
+
+    timer.countdownRemainingMs -=
+      delta;
+
+    timer.startedAt = now;
+
+    timer.elapsedMs =
+      timer.countdownDurationMs -
+      timer.countdownRemainingMs;
+
+    if (
+      timer.countdownRemainingMs <= 0
+    ) {
+
+      timer.countdownRemainingMs =
+        0;
+
+      timer.elapsedMs =
+        timer.countdownDurationMs;
+
+      timer.running =
+        false;
+
+      timer.startedAt =
+        null;
+
+      saveTimerStudyDelta();
+
+      timer.savedMs =
+        timer.countdownDurationMs;
+
+      updateTimerDisplay();
+
+      showTimerEnded();
+
+      return;
+    }
+  }
+
+  saveTimerStudyDelta();
+
+  updateTimerDisplay();
+}
+
+
+// =========================================================
+// TIMER MODE
+// =========================================================
+
+function selectTimerMode(mode) {
+
+  if (timer.running) {
+    updateTimerState();
+
+    timer.running =
+      false;
+
+    timer.startedAt =
+      null;
+
+    saveTimerStudyDelta();
+  }
+
+  timer.mode =
+    mode;
+
+  timer.running =
+    false;
+
+  timer.startedAt =
+    null;
+
+  timer.elapsedMs =
+    0;
+
+  timer.savedMs =
+    0;
+
+  if (mode === "countdown") {
+
+    const seconds =
+      getCountdownInputSeconds();
+
+    timer.countdownDurationMs =
+      seconds * 1000;
+
+    timer.countdownRemainingMs =
+      timer.countdownDurationMs;
+
+  } else {
+
+    timer.countdownDurationMs =
+      0;
+
+    timer.countdownRemainingMs =
+      0;
+  }
+
+  timer.lastDisplaySecond =
+    -1;
+
+  $("stopwatchMode")
+    ?.classList.toggle(
+      "active",
+      mode === "stopwatch"
+    );
+
+  $("countdownMode")
+    ?.classList.toggle(
+      "active",
+      mode === "countdown"
+    );
+
+  $("countdownInput")
+    ?.classList.toggle(
+      "hidden",
+      mode !== "countdown"
+    );
+
+  updateTimerDisplay();
+}
+
+
+// =========================================================
+// START / RESUME TIMER
+// =========================================================
+
+function startStudyTimer() {
+
+  if (timer.running) {
+    return;
+  }
+
+  if (
+    timer.mode ===
+    "countdown"
+  ) {
+
+    if (
+      timer.countdownRemainingMs <= 0
+    ) {
+
+      const seconds =
+        getCountdownInputSeconds();
+
+      if (
+        !Number.isFinite(seconds) ||
+        seconds <= 0
+      ) {
+
+        alert(
+          "Select a countdown time."
+        );
+
+        return;
+      }
+
+      timer.countdownDurationMs =
+        seconds * 1000;
+
+      timer.countdownRemainingMs =
+        timer.countdownDurationMs;
+
+      timer.elapsedMs =
+        0;
+
+      timer.savedMs =
+        0;
+    }
+  }
+
+  timer.running =
+    true;
+
+  timer.startedAt =
+    Date.now();
+
+  timer.lastDisplaySecond =
+    -1;
+
+  updateTimerDisplay();
+}
+
+
+// =========================================================
+// PAUSE TIMER
+// =========================================================
+
+function pauseStudyTimer() {
+
+  if (!timer.running) {
+    return;
+  }
+
+  updateTimerState();
+
+  timer.running =
+    false;
+
+  timer.startedAt =
+    null;
+
+  saveTimerStudyDelta();
+
+  updateTimerDisplay();
+
+  updateMainUI();
+}
+
+
+// =========================================================
+// RESET TIMER
+// =========================================================
+
+function resetStudyTimer() {
+
+  if (timer.running) {
+    updateTimerState();
+  }
+
+  timer.running =
+    false;
+
+  timer.startedAt =
+    null;
+
+  timer.elapsedMs =
+    0;
+
+  timer.savedMs =
+    0;
+
+  if (
+    timer.mode ===
+    "countdown"
+  ) {
+
+    const seconds =
+      getCountdownInputSeconds();
+
+    timer.countdownDurationMs =
+      seconds * 1000;
+
+    timer.countdownRemainingMs =
+      timer.countdownDurationMs;
+
+  } else {
+
+    timer.countdownDurationMs =
+      0;
+
+    timer.countdownRemainingMs =
+      0;
+  }
+
+  timer.lastDisplaySecond =
+    -1;
+
+  updateTimerDisplay();
+
+  updateMainUI();
+}
+
+
+// =========================================================
+// CREATE PICKER ON PAGE LOAD
+// =========================================================
+
+createCountdownPicker();
+
+if (
+  timer.mode ===
+  "countdown"
+) {
+  $("countdownInput")
+    ?.classList.remove("hidden");
+} else {
+  $("countdownInput")
+    ?.classList.add("hidden");
+}
+
+updateTimerDisplay();
 
       context.stroke();
 
@@ -3346,33 +3865,6 @@ function startStudyTimer() {
       timer.countdownDurationMs =
         Math.round(
           minutes *
-          60 *
-          1000
-        );
-
-
-      timer.countdownRemainingMs =
-        timer.countdownDurationMs;
-
-
-      timer.elapsedMs =
-        0;
-
-
-      timer.savedMs =
-        0;
-
-    }
-
-  }
-
-
-  timer.running =
-    true;
-
-
-  timer.startedAt =
-    Date.now();
 
 
   timer.lastDisplaySecond =
