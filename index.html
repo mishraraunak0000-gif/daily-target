@@ -2,7 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="theme-color"
+    content="#f5f7fa"
+  >
+
+  <meta
+    name="description"
+    content="Daily Target - personal daily discipline and study tracker"
+  >
 
   <title>Daily Target</title>
 
@@ -11,86 +25,143 @@
 
 <body>
 
-<div class="app">
+  <!-- =========================================================
+       MAIN DASHBOARD
+       ========================================================= -->
 
-  <!-- HEADER -->
-  <header>
-    <div>
-      <p class="eyebrow">DAILY DISCIPLINE</p>
-      <h1>My Targets</h1>
-      <p id="todayDate"></p>
-    </div>
+  <main id="mainDashboard" class="app">
 
-    <div class="streak">
-      <span>🔥</span>
-      <strong id="bestStreak">0</strong>
-      <small>best streak</small>
-    </div>
-  </header>
+    <!-- HEADER -->
+    <header class="app-header">
+
+      <div>
+        <p class="eyebrow">DAILY DISCIPLINE</p>
+
+        <h1>My Targets</h1>
+
+        <p id="todayDate" class="date-text">
+          Loading date...
+        </p>
+      </div>
+
+      <div class="streak-card">
+
+        <div class="streak-icon">🔥</div>
+
+        <strong id="bestStreak">
+          0
+        </strong>
+
+        <span>best streak</span>
+
+      </div>
+
+    </header>
 
 
-  <main>
+    <!-- =======================================================
+         TODAY'S PROGRESS
+         ======================================================= -->
 
-    <!-- TODAY'S PROGRESS -->
-    <section class="progress-card">
+    <section class="card progress-card">
 
-      <div class="progress-top">
-        <span>Today's Progress</span>
-        <strong id="progressPercent">0%</strong>
+      <div class="section-heading">
+
+        <div>
+          <h2>Today's Progress</h2>
+        </div>
+
+        <strong id="progressPercent">
+          0%
+        </strong>
+
       </div>
 
       <div class="progress-bar">
-        <div id="progressFill"></div>
+        <div
+          id="progressFill"
+          class="progress-fill"
+          style="width: 0%"
+        ></div>
       </div>
 
-      <p id="progressText">0 of 0 tasks completed</p>
+      <p id="progressText">
+        0 of 0 completed
+      </p>
 
     </section>
 
 
-    <!-- REGULAR / DAILY TARGET -->
-    <section class="target-card daily">
+    <!-- =======================================================
+         REGULAR TARGET
+         ======================================================= -->
 
-      <div class="card-heading">
+    <section
+      id="regularTargetCard"
+      class="card target-card"
+    >
 
-        <div class="icon">🎯</div>
+      <div class="target-card-header">
+
+        <div class="target-icon">
+          🎯
+        </div>
 
         <div>
-          <span class="label">REGULAR TARGET</span>
-          <h2 id="dailyTargetName">No tasks planned</h2>
+
+          <p class="target-label">
+            REGULAR TARGET
+          </p>
+
+          <h2 id="dailyTargetName">
+            No tasks planned
+          </h2>
+
         </div>
 
       </div>
 
 
-      <div class="target-info">
-        <span>
-          📋 <b id="dailyTargetTime">Tap to plan today's tasks</b>
-        </span>
+      <div class="target-summary">
+
+        <p id="dailyTargetTime">
+          No task planned
+        </p>
+
+        <p id="regularTargetProgress">
+          0 / 0 completed
+        </p>
+
+        <p id="dailyStatus">
+          No tasks planned
+        </p>
+
       </div>
 
 
-      <div id="regularTargetProgress" class="status">
-        0 tasks completed
-      </div>
+      <div class="target-actions">
 
-
-      <div id="dailyStatus" class="status">
-        Incomplete
-      </div>
-
-
-      <div class="actions">
-
-        <button id="openRegularTarget" class="complete-btn">
+        <button
+          id="openRegularTarget"
+          class="primary-button"
+          type="button"
+        >
           📋 Open Tasks
         </button>
 
-        <button id="dailyComplete" class="complete-btn">
-          ✓ Complete
+        <button
+          id="completeAllRegular"
+          class="secondary-button"
+          type="button"
+        >
+          Complete All
         </button>
 
-        <button id="editDaily" class="secondary-btn">
+        <button
+          id="editDaily"
+          class="outline-button"
+          type="button"
+        >
           Edit
         </button>
 
@@ -99,41 +170,57 @@
     </section>
 
 
-    <!-- FIXED TARGET -->
-    <section class="target-card fixed">
+    <!-- =======================================================
+         FIXED EVERYDAY TARGET
+         ======================================================= -->
 
-      <div class="card-heading">
+    <section
+      id="fixedTargetCard"
+      class="card target-card"
+    >
 
-        <div class="icon">🔒</div>
+      <div class="target-card-header">
+
+        <div class="target-icon">
+          🔒
+        </div>
 
         <div>
-          <span class="label">FIXED EVERYDAY TARGET</span>
-          <h2 id="fixedTargetName">No fixed target set</h2>
+
+          <p class="target-label">
+            FIXED EVERYDAY TARGET
+          </p>
+
+          <h2 id="fixedTargetName">
+            No fixed targets
+          </h2>
+
         </div>
 
       </div>
 
 
-      <div class="target-info">
-        <span>
-          ⏰ <b id="fixedTargetTime">No time set</b>
-        </span>
+      <div class="target-summary">
+
+        <p id="fixedTargetTime">
+          No fixed targets
+        </p>
+
+        <p id="fixedStatus">
+          No fixed targets
+        </p>
+
       </div>
 
 
-      <div id="fixedStatus" class="status">
-        Incomplete
-      </div>
+      <div class="target-actions">
 
-
-      <div class="actions">
-
-        <button id="fixedComplete" class="complete-btn">
-          ✓ Complete
-        </button>
-
-        <button id="editFixed" class="secondary-btn">
-          Change
+        <button
+          id="openFixedTargets"
+          class="primary-button"
+          type="button"
+        >
+          🔒 Open Fixed Targets
         </button>
 
       </div>
@@ -141,17 +228,34 @@
     </section>
 
 
-    <!-- STUDY TIMER -->
-    <section class="timer-card">
+    <!-- =======================================================
+         STUDY TIMER
+         ======================================================= -->
 
-      <div class="section-title">
-        <h2>📚 Study Timer</h2>
+    <section class="card study-timer-card">
+
+      <div class="section-title-row">
+
+        <div>
+
+          <h2>📚 Study Timer</h2>
+
+          <p>
+            Track your actual study time.
+          </p>
+
+        </div>
+
       </div>
 
 
-      <div class="study-time-box">
+      <!-- TODAY'S STUDY TIME -->
 
-        <span>Today's Study Time</span>
+      <div class="study-time-display">
+
+        <span>
+          Today's Study Time
+        </span>
 
         <strong id="studyTimeToday">
           0 min
@@ -160,13 +264,23 @@
       </div>
 
 
-      <div class="timer-modes">
+      <!-- TIMER MODE -->
 
-        <button id="stopwatchMode" class="mode-btn active">
+      <div class="timer-mode-buttons">
+
+        <button
+          id="stopwatchMode"
+          class="timer-mode-button active"
+          type="button"
+        >
           Stopwatch
         </button>
 
-        <button id="countdownMode" class="mode-btn">
+        <button
+          id="countdownMode"
+          class="timer-mode-button"
+          type="button"
+        >
           Countdown
         </button>
 
@@ -175,9 +289,12 @@
 
       <!-- COUNTDOWN INPUT -->
 
-      <div id="countdownInput" class="hidden">
+      <div
+        id="countdownInput"
+        class="countdown-input-area hidden"
+      >
 
-        <label>
+        <label for="countdownMinutes">
           Countdown minutes
         </label>
 
@@ -185,7 +302,9 @@
           id="countdownMinutes"
           type="number"
           min="1"
-          placeholder="Example: 60"
+          max="1440"
+          step="1"
+          placeholder="Enter minutes"
         >
 
       </div>
@@ -193,25 +312,40 @@
 
       <!-- TIMER DISPLAY -->
 
-      <div id="timerDisplay" class="timer-display">
+      <div
+        id="timerDisplay"
+        class="timer-display"
+      >
         00:00:00
       </div>
 
 
-      <!-- TIMER BUTTONS -->
+      <!-- TIMER CONTROLS -->
 
-      <div class="timer-actions">
+      <div class="timer-controls">
 
-        <button id="startStudyTimer" class="complete-btn">
-          ▶ Start
+        <button
+          id="startStudyTimer"
+          class="primary-button"
+          type="button"
+        >
+          Start
         </button>
 
-        <button id="pauseStudyTimer" class="secondary-btn">
-          ⏸ Pause
+        <button
+          id="pauseStudyTimer"
+          class="secondary-button"
+          type="button"
+        >
+          Pause
         </button>
 
-        <button id="resetStudyTimer" class="secondary-btn">
-          ↻ Reset
+        <button
+          id="resetStudyTimer"
+          class="outline-button"
+          type="button"
+        >
+          Reset
         </button>
 
       </div>
@@ -219,26 +353,28 @@
 
       <!-- MANUAL STUDY TIME -->
 
-      <div class="manual-study">
+      <div class="manual-study-area">
 
-        <label>
-          Forgot to run the timer?
+        <label for="manualStudyTime">
+          Add today's study time manually
         </label>
 
-        <div class="manual-row">
+        <div class="manual-study-row">
 
           <input
             id="manualStudyTime"
             type="number"
             min="0"
-            placeholder="Minutes studied"
+            step="1"
+            placeholder="Minutes"
           >
 
           <button
             id="saveManualStudyTime"
-            class="secondary-btn"
+            class="secondary-button"
+            type="button"
           >
-            Add
+            Add Time
           </button>
 
         </div>
@@ -248,362 +384,809 @@
     </section>
 
 
-    <!-- TODAY SUMMARY -->
-    <section class="summary-card">
+    <!-- =======================================================
+         WEEKLY STATISTICS
+         ======================================================= -->
 
-      <div class="section-title">
-        <h2>Today's Summary</h2>
+    <section class="card weekly-statistics-card">
+
+      <div class="section-title-row">
+
+        <div>
+
+          <h2>📊 Weekly Statistics</h2>
+
+          <p>
+            Study and task progress.
+          </p>
+
+        </div>
+
       </div>
 
 
-      <div class="summary-grid">
+      <button
+        id="openWeeklyStats"
+        class="green-button"
+        type="button"
+      >
+        View Study Time of the Week
+      </button>
 
-        <div>
-          <strong id="todayTaskSummary">
-            0 / 0
-          </strong>
-
-          <span>Tasks</span>
-        </div>
-
-
-        <div>
-          <strong id="todayStudySummary">
-            0 min
-          </strong>
-
-          <span>Study Time</span>
-        </div>
+    </section>
 
 
-        <div>
-          <strong id="todayFixedSummary">
-            ❌
-          </strong>
+    <!-- =======================================================
+         TODAY SUMMARY
+         ======================================================= -->
 
-          <span>Fixed Target</span>
-        </div>
+    <section class="card summary-card">
+
+      <h2>Today's Summary</h2>
+
+      <div class="summary-row">
+
+        <span>Regular Tasks</span>
+
+        <strong id="todayTaskSummary">
+          0 / 0 completed
+        </strong>
+
+      </div>
+
+
+      <div class="summary-row">
+
+        <span>Study Time</span>
+
+        <strong id="todayStudySummary">
+          0 min
+        </strong>
+
+      </div>
+
+
+      <div class="summary-row">
+
+        <span>Fixed Targets</span>
+
+        <strong id="todayFixedSummary">
+          0 / 0 completed
+        </strong>
 
       </div>
 
     </section>
 
 
-    <!-- WEEKLY STATISTICS -->
-    <section class="weekly-card">
+    <!-- =======================================================
+         7-DAY HISTORY
+         ======================================================= -->
 
-      <div class="section-title">
-        <h2>📊 Weekly Statistics</h2>
+    <section class="card history-card">
+
+      <h2>7-Day History</h2>
+
+      <div id="history">
+        <!-- JavaScript fills this -->
       </div>
-
-
-      <div class="weekly-stats">
-
-        <div>
-          <strong id="weeklyStudyTotal">
-            0 min
-          </strong>
-
-          <span>Study Time</span>
-        </div>
-
-
-        <div>
-          <strong id="weeklyTasksCompleted">
-            0
-          </strong>
-
-          <span>Tasks Done</span>
-        </div>
-
-
-        <div>
-          <strong id="weeklyTasksTotal">
-            0
-          </strong>
-
-          <span>Total Tasks</span>
-        </div>
-
-
-        <div>
-          <strong id="weeklyBestStreak">
-            0
-          </strong>
-
-          <span>Best Streak</span>
-        </div>
-
-      </div>
-
-
-      <div class="chart-container">
-
-        <canvas id="weeklyChart"></canvas>
-
-      </div>
-
-
-      <div id="weeklyHistory"></div>
 
     </section>
 
 
-    <!-- 7 DAY HISTORY -->
-    <section class="history-card">
+    <!-- =======================================================
+         SETTINGS
+         ======================================================= -->
 
-      <div class="section-title">
-        <h2>7-Day History</h2>
-      </div>
-
-      <div id="history"></div>
-
-    </section>
-
-
-    <!-- SETTINGS -->
-    <section class="settings-card">
+    <section class="card settings-card">
 
       <h2>Settings</h2>
 
       <button
         id="notificationBtn"
-        class="notification-btn"
+        class="secondary-button"
+        type="button"
       >
-        🔔 Enable Notifications
+        Enable Notifications
       </button>
 
-      <p>
-        Notifications remind you when a planned task reaches its time.
+      <p class="settings-description">
+        Notifications remind you when a planned task reaches
+        its scheduled time or when a countdown timer ends.
       </p>
 
     </section>
 
   </main>
 
-</div>
 
+  <!-- =========================================================
+       FULL REGULAR TASKS INTERFACE
+       ========================================================= -->
 
+  <section
+    id="regularTasksView"
+    class="full-interface hidden"
+  >
 
-<!-- ========================= -->
-<!-- REGULAR TASK PLANNER -->
-<!-- ========================= -->
-
-<div id="regularPlanner" class="modal hidden">
-
-  <div class="modal-box planner-box">
-
-    <button
-      id="closeRegularPlanner"
-      class="close"
-    >
-      ×
-    </button>
-
-
-    <h2>📋 Regular Target</h2>
-
-
-    <label>
-      Plan tasks for
-    </label>
-
-    <input
-      id="plannerDate"
-      type="date"
-    >
-
-
-    <div class="planner-add">
+    <header class="full-interface-header">
 
       <button
-        id="addTaskBtn"
-        class="save-btn"
+        id="closeRegularTasks"
+        class="back-button"
+        type="button"
       >
-        + Add Task
+        ←
+      </button>
+
+      <div>
+
+        <p class="eyebrow">
+          REGULAR TARGET
+        </p>
+
+        <h1>Today's Tasks</h1>
+
+        <p id="regularTasksDate">
+          Loading date...
+        </p>
+
+      </div>
+
+    </header>
+
+
+    <div class="full-interface-content">
+
+      <!-- TASK PROGRESS -->
+
+      <div class="interface-progress-card">
+
+        <div>
+
+          <span>Today's Progress</span>
+
+          <strong id="regularTasksProgress">
+            0 / 0
+          </strong>
+
+        </div>
+
+        <div class="progress-bar">
+
+          <div
+            id="regularTasksProgressFill"
+            class="progress-fill"
+            style="width: 0%"
+          ></div>
+
+        </div>
+
+      </div>
+
+
+      <!-- TASK LIST -->
+
+      <div class="interface-section">
+
+        <div class="interface-section-heading">
+
+          <h2>Tasks</h2>
+
+          <span id="regularTasksCount">
+            0 tasks
+          </span>
+
+        </div>
+
+        <div id="regularTasksList">
+
+          <!-- JavaScript creates task rows -->
+
+        </div>
+
+      </div>
+
+
+      <!-- ACTIONS -->
+
+      <div class="interface-actions">
+
+        <button
+          id="addTaskBtn"
+          class="primary-button"
+          type="button"
+        >
+          ➕ Add Task
+        </button>
+
+        <button
+          id="completeAllRegularFromView"
+          class="secondary-button"
+          type="button"
+        >
+          ✓ Complete All
+        </button>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- =========================================================
+       REGULAR TASK PLANNER INTERFACE
+       ========================================================= -->
+
+  <section
+    id="regularPlanner"
+    class="full-interface hidden"
+  >
+
+    <header class="full-interface-header">
+
+      <button
+        id="closeRegularPlanner"
+        class="back-button"
+        type="button"
+      >
+        ←
+      </button>
+
+      <div>
+
+        <p class="eyebrow">
+          TASK PLANNER
+        </p>
+
+        <h1>Plan Regular Tasks</h1>
+
+        <p>
+          Add tasks for a selected date.
+        </p>
+
+      </div>
+
+    </header>
+
+
+    <div class="full-interface-content">
+
+      <div class="form-group">
+
+        <label for="plannerDate">
+          Date
+        </label>
+
+        <input
+          id="plannerDate"
+          type="date"
+        >
+
+      </div>
+
+
+      <div class="interface-section">
+
+        <div class="interface-section-heading">
+
+          <h2>Planned Tasks</h2>
+
+          <button
+            id="addTaskFromPlanner"
+            class="small-button"
+            type="button"
+          >
+            + Add
+          </button>
+
+        </div>
+
+        <div id="plannerTasksList">
+
+          <!-- JavaScript fills this -->
+
+        </div>
+
+      </div>
+
+
+      <button
+        id="saveRegularPlan"
+        class="primary-button full-width-button"
+        type="button"
+      >
+        Save Plan
       </button>
 
     </div>
 
-
-    <div id="regularTasksList"></div>
-
-
-    <button
-      id="saveRegularPlan"
-      class="save-btn"
-    >
-      Save Plan
-    </button>
-
-  </div>
-
-</div>
+  </section>
 
 
+  <!-- =========================================================
+       FULL FIXED TARGETS INTERFACE
+       ========================================================= -->
 
-<!-- ========================= -->
-<!-- ADD TASK MODAL -->
-<!-- ========================= -->
+  <section
+    id="fixedTargetsView"
+    class="full-interface hidden"
+  >
 
-<div id="taskModal" class="modal hidden">
+    <header class="full-interface-header">
 
-  <div class="modal-box">
+      <button
+        id="closeFixedTargets"
+        class="back-button"
+        type="button"
+      >
+        ←
+      </button>
 
-    <button
-      id="closeTaskModal"
-      class="close"
-    >
-      ×
-    </button>
+      <div>
 
+        <p class="eyebrow">
+          EVERYDAY TARGETS
+        </p>
 
-    <h2>Add Task</h2>
+        <h1>Fixed Targets</h1>
 
+        <p>
+          These targets repeat every day.
+        </p>
 
-    <label>
-      Task
-    </label>
+      </div>
 
-    <input
-      id="taskNameInput"
-      type="text"
-      placeholder="Example: Complete Maths Chapter 3"
-    >
-
-
-    <label>
-      Date
-    </label>
-
-    <input
-      id="taskDateInput"
-      type="date"
-    >
+    </header>
 
 
-    <label>
-      Time
-    </label>
+    <div class="full-interface-content">
 
-    <input
-      id="taskTimeInput"
-      type="time"
-    >
+      <div class="interface-section">
 
+        <div class="interface-section-heading">
 
-    <button
-      id="saveTaskBtn"
-      class="save-btn"
-    >
-      Add Task
-    </button>
+          <h2>Your Fixed Targets</h2>
 
-  </div>
+          <span id="fixedTargetsCount">
+            0 targets
+          </span>
 
-</div>
+        </div>
 
+        <div id="fixedTargetsList">
 
+          <!-- JavaScript creates fixed target rows -->
 
-<!-- ========================= -->
-<!-- FIXED TARGET MODAL -->
-<!-- ========================= -->
+        </div>
 
-<div id="modal" class="modal hidden">
-
-  <div class="modal-box">
-
-    <button
-      id="closeModal"
-      class="close"
-    >
-      ×
-    </button>
+      </div>
 
 
-    <h2 id="modalTitle">
-      Set Fixed Target
-    </h2>
+      <button
+        id="addFixedTarget"
+        class="green-button full-width-button"
+        type="button"
+      >
+        ➕ Add Fixed Target
+      </button>
 
-
-    <label>
-      Target
-    </label>
-
-    <input
-      id="targetInput"
-      type="text"
-      placeholder="Example: Wake up at 6 AM"
-    >
-
-
-    <label>
-      Time
-    </label>
-
-    <input
-      id="timeInput"
-      type="time"
-    >
-
-
-    <button
-      id="saveTarget"
-      class="save-btn"
-    >
-      Save Target
-    </button>
-
-  </div>
-
-</div>
-
-
-
-<!-- ========================= -->
-<!-- REMINDER -->
-<!-- ========================= -->
-
-<div id="reminder" class="reminder hidden">
-
-  <div class="reminder-box">
-
-    <div class="alarm-icon">
-      🔔
     </div>
 
-
-    <h2>
-      Task Reminder
-    </h2>
+  </section>
 
 
-    <p id="reminderText"></p>
+  <!-- =========================================================
+       WEEKLY STUDY STATISTICS FULL INTERFACE
+       ========================================================= -->
+
+  <section
+    id="weeklyStatsView"
+    class="full-interface hidden"
+  >
+
+    <header class="full-interface-header">
+
+      <button
+        id="closeWeeklyStats"
+        class="back-button"
+        type="button"
+      >
+        ←
+      </button>
+
+      <div>
+
+        <p class="eyebrow">
+          WEEKLY STATISTICS
+        </p>
+
+        <h1>Study Time of the Week</h1>
+
+        <p id="weeklyStatsDateRange">
+          Current week
+        </p>
+
+      </div>
+
+    </header>
 
 
-    <button
-      id="reminderComplete"
-      class="complete-btn"
-    >
-      ✓ I Completed It
-    </button>
+    <div class="full-interface-content">
 
 
-    <button
-      id="remindLater"
-      class="secondary-btn"
-    >
-      Remind Me Later
-    </button>
+      <!-- =====================================================
+           STUDY GRAPH
+           ===================================================== -->
+
+      <div class="interface-section graph-section">
+
+        <div class="interface-section-heading">
+
+          <div>
+
+            <h2>Study Time</h2>
+
+            <p>
+              Actual recorded study time in minutes.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="study-chart-wrapper">
+
+          <canvas
+            id="studyChart"
+            aria-label="Weekly study time graph"
+          ></canvas>
+
+          <div
+            id="studyChartEmpty"
+            class="chart-empty-message hidden"
+          >
+            No study time recorded yet.
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- =====================================================
+           HIGHEST / LOWEST
+           ===================================================== -->
+
+      <div class="study-extremes-grid">
+
+        <div class="stat-highlight-card">
+
+          <span>
+            Highest Study Time
+          </span>
+
+          <strong id="highestStudyTime">
+            —
+          </strong>
+
+          <p id="highestStudyDay">
+            —
+          </p>
+
+        </div>
+
+
+        <div class="stat-highlight-card">
+
+          <span>
+            Lowest Study Time
+          </span>
+
+          <strong id="lowestStudyTime">
+            —
+          </strong>
+
+          <p id="lowestStudyDay">
+            —
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <!-- =====================================================
+           DAILY STUDY DATA
+           ===================================================== -->
+
+      <div class="interface-section">
+
+        <div class="interface-section-heading">
+
+          <h2>Study Record</h2>
+
+        </div>
+
+        <div id="weeklyStudyHistory">
+
+          <!-- JavaScript creates only days with actual study data -->
+
+        </div>
+
+      </div>
+
+
+      <!-- =====================================================
+           TASK COMPLETION BY DAY
+           ===================================================== -->
+
+      <div class="interface-section">
+
+        <div class="interface-section-heading">
+
+          <div>
+
+            <h2>Task Completion</h2>
+
+            <p>
+              Regular task completion for each day.
+            </p>
+
+          </div>
+
+        </div>
+
+        <div id="weeklyTaskHistory">
+
+          <!-- JavaScript creates daily task completion records -->
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- =========================================================
+       ADD TASK INTERFACE
+       ========================================================= -->
+
+  <div
+    id="taskModal"
+    class="modal hidden"
+  >
+
+    <div class="modal-box">
+
+      <button
+        id="closeTaskModal"
+        class="modal-close"
+        type="button"
+        aria-label="Close"
+      >
+        ×
+      </button>
+
+      <h2>Add Task</h2>
+
+      <div class="form-group">
+
+        <label for="taskNameInput">
+          Task name
+        </label>
+
+        <input
+          id="taskNameInput"
+          type="text"
+          placeholder="Enter task name"
+          maxlength="100"
+        >
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="taskDateInput">
+          Date
+        </label>
+
+        <input
+          id="taskDateInput"
+          type="date"
+        >
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="taskTimeInput">
+          Time
+        </label>
+
+        <input
+          id="taskTimeInput"
+          type="time"
+        >
+
+      </div>
+
+
+      <button
+        id="saveTaskBtn"
+        class="primary-button full-width-button"
+        type="button"
+      >
+        Save Task
+      </button>
+
+    </div>
 
   </div>
 
-</div>
+
+  <!-- =========================================================
+       TARGET EDIT MODAL
+       ========================================================= -->
+
+  <div
+    id="modal"
+    class="modal hidden"
+  >
+
+    <div class="modal-box">
+
+      <button
+        id="closeModal"
+        class="modal-close"
+        type="button"
+        aria-label="Close"
+      >
+        ×
+      </button>
+
+      <h2 id="modalTitle">
+        Target
+      </h2>
+
+      <div class="form-group">
+
+        <label for="targetInput">
+          Target name
+        </label>
+
+        <input
+          id="targetInput"
+          type="text"
+          placeholder="Enter target"
+          maxlength="100"
+        >
+
+      </div>
 
 
+      <div class="form-group">
 
-<!-- JAVASCRIPT -->
-<script src="./script.js"></script>
+        <label for="timeInput">
+          Time
+        </label>
+
+        <input
+          id="timeInput"
+          type="time"
+        >
+
+      </div>
+
+
+      <button
+        id="saveTarget"
+        class="primary-button full-width-button"
+        type="button"
+      >
+        Save Target
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================================================
+       REMINDER / IN-APP NOTIFICATION
+       ========================================================= -->
+
+  <div
+    id="reminder"
+    class="reminder hidden"
+  >
+
+    <div class="reminder-box">
+
+      <div class="reminder-icon">
+        🔔
+      </div>
+
+      <h2>
+        Target Reminder
+      </h2>
+
+      <p id="reminderText">
+        It is time to complete your task.
+      </p>
+
+      <div class="reminder-actions">
+
+        <button
+          id="reminderComplete"
+          class="primary-button"
+          type="button"
+        >
+          Mark Complete
+        </button>
+
+        <button
+          id="remindLater"
+          class="secondary-button"
+          type="button"
+        >
+          Remind Me Later
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================================================
+       COUNTDOWN END NOTIFICATION
+       ========================================================= -->
+
+  <div
+    id="timerEndedReminder"
+    class="reminder hidden"
+  >
+
+    <div class="reminder-box">
+
+      <div class="reminder-icon">
+        ⏰
+      </div>
+
+      <h2>
+        Timer Ended
+      </h2>
+
+      <p>
+        Your countdown timer has reached 00:00.
+      </p>
+
+      <button
+        id="closeTimerEndedReminder"
+        class="primary-button"
+        type="button"
+      >
+        OK
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================================================
+       SCRIPT
+       ========================================================= -->
+
+  <script src="./script.js"></script>
 
 </body>
-</html>
+      </html>
