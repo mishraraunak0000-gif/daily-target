@@ -1,283 +1,362 @@
 // =========================================================
 // DAILY TARGET — FINAL JAVASCRIPT
+// PART 1 OF 3
 // =========================================================
 
-const STORAGE_KEY = "dailyTargetApp_final_v1";
+const STORAGE_KEY = "dailyTargetApp_final_v2";
+
 const OLD_KEYS = [
-"dailyTargetApp_v1",
-"dailyTargetApp_v2"
+  "dailyTargetApp_final_v1",
+  "dailyTargetApp_v1",
+  "dailyTargetApp_v2"
 ];
 
 const $ = (id) => document.getElementById(id);
+
 
 // =========================================================
 // DATE / ID HELPERS
 // =========================================================
 
 function todayKey() {
-const d = new Date();
+  const d = new Date();
 
-return ${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")};
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+
 
 function dateFromKey(key) {
-const [year, month, day] = key.split("-").map(Number);
+  const [year, month, day] = key.split("-").map(Number);
 
-return new Date(year, month - 1, day);
+  return new Date(year, month - 1, day);
 }
+
 
 function makeId(prefix = "id") {
-return ${prefix}_${Date.now()}_${Math.random()   .toString(36)   .slice(2, 8)};
+  return `${prefix}_${Date.now()}_${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
 }
+
 
 function formatDateLong(key = todayKey()) {
-return dateFromKey(key).toLocaleDateString("en-IN", {
-weekday: "long",
-day: "numeric",
-month: "long",
-year: "numeric"
-});
+  return dateFromKey(key).toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
 }
+
 
 function formatDateShort(key) {
-return dateFromKey(key).toLocaleDateString("en-IN", {
-day: "numeric",
-month: "short",
-year: "numeric"
-});
+  return dateFromKey(key).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  });
 }
+
 
 function dateLabel(key) {
-return dateFromKey(key).toLocaleDateString("en-IN", {
-weekday: "long",
-day: "numeric",
-month: "long",
-year: "numeric"
-});
+  return dateFromKey(key).toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
 }
+
 
 function formatTime(time) {
-if (!time) return "No time set";
+  if (!time) return "No time set";
 
-const [hours, minutes] = time.split(":").map(Number);
+  const [hours, minutes] = time.split(":").map(Number);
 
-const d = new Date();
+  const d = new Date();
 
-d.setHours(hours, minutes, 0, 0);
+  d.setHours(hours, minutes, 0, 0);
 
-return d.toLocaleTimeString("en-IN", {
-hour: "numeric",
-minute: "2-digit"
-});
+  return d.toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit"
+  });
 }
+
 
 function formatClock(milliseconds) {
-const totalSeconds = Math.max(
-0,
-Math.floor(milliseconds / 1000)
-);
+  const totalSeconds = Math.max(
+    0,
+    Math.floor(milliseconds / 1000)
+  );
 
-const hours = Math.floor(totalSeconds / 3600);
+  const hours = Math.floor(totalSeconds / 3600);
 
-const minutes = Math.floor(
-(totalSeconds % 3600) / 60
-);
+  const minutes = Math.floor(
+    (totalSeconds % 3600) / 60
+  );
 
-const seconds = totalSeconds % 60;
+  const seconds = totalSeconds % 60;
 
-return ${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")};
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
+
 
 function formatMinutes(seconds) {
-return ${Math.floor(Math.max(0, seconds) / 60)} min;
+  return `${Math.floor(Math.max(0, seconds) / 60)} min`;
 }
 
+
 function escapeHtml(value) {
-return String(value).replace(
-/[&<>'"]/g,
-character => ({
-"&": "&",
-"<": "<",
-">": ">",
-"'": "'",
-'"': """
-}[character])
-);
+  return String(value).replace(
+    /[&<>'"]/g,
+    (character) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "'": "&#39;",
+      '"': "&quot;"
+    }[character])
+  );
 }
+
 
 // =========================================================
 // DATA
 // =========================================================
 
 function emptyData() {
-return {
-version: 1,
+  return {
+    version: 2,
 
-fixedTargets: [],  
+    fixedTargets: [],
 
-tasks: {},  
+    tasks: {},
 
-studyByDate: {},  
+    studyByDate: {},
 
-completedDays: {},  
+    completedDays: {},
 
-notified: {},  
+    notified: {},
 
-bestStreak: 0,  
+    bestStreak: 0,
 
-streak: 0
-
-};
+    streak: 0
+  };
 }
 
-function normalizeTask(task, dateFallback = todayKey()) {
-return {
-id: task.id || makeId("task"),
 
-name: String(  
-  task.name ||  
-  task.title ||  
-  ""  
-).trim(),  
+function normalizeTask(
+  task,
+  dateFallback = todayKey()
+) {
+  return {
+    id:
+      task.id ||
+      makeId("task"),
 
-date:  
-  task.date ||  
-  dateFallback,  
+    name:
+      String(
+        task.name ||
+        task.title ||
+        ""
+      ).trim(),
 
-time:  
-  task.time ||  
-  "",  
+    date:
+      task.date ||
+      dateFallback,
 
-completed:  
-  Boolean(  
-    task.completed ||  
-    task.done  
-  )
+    time:
+      task.time ||
+      "",
 
-};
+    completed:
+      Boolean(
+        task.completed ||
+        task.done
+      )
+  };
 }
+
 
 function normalizeFixed(target) {
-const completedDate =
-target.completedDate ||
-(target.completed
-? todayKey()
-: "");
+  const completedDate =
+    target.completedDate ||
+    (
+      target.completed
+        ? todayKey()
+        : ""
+    );
 
-return {
-id:
-target.id ||
-makeId("fixed"),
+  return {
+    id:
+      target.id ||
+      makeId("fixed"),
 
-name:  
-  String(  
-    target.name ||  
-    target.title ||  
-    ""  
-  ).trim(),  
+    name:
+      String(
+        target.name ||
+        target.title ||
+        ""
+      ).trim(),
 
-time:  
-  target.time ||  
-  "",  
+    time:
+      target.time ||
+      "",
 
-completed:  
-  completedDate === todayKey(),  
+    completed:
+      completedDate === todayKey(),
 
-completedDate
-
-};
+    completedDate
+  };
 }
+
 
 function normalizeData(input) {
-const data = emptyData();
+  const data = emptyData();
 
-data.bestStreak =
-Number.isFinite(input.bestStreak)
-? input.bestStreak
-: 0;
+  if (
+    Number.isFinite(
+      Number(input.bestStreak)
+    )
+  ) {
+    data.bestStreak =
+      Number(input.bestStreak);
+  }
 
-data.streak =
-Number.isFinite(input.streak)
-? input.streak
-: 0;
+  if (
+    Number.isFinite(
+      Number(input.streak)
+    )
+  ) {
+    data.streak =
+      Number(input.streak);
+  }
 
-if (Array.isArray(input.fixedTargets)) {
 
-data.fixedTargets =  
-  input.fixedTargets  
-    .map(normalizeFixed)  
-    .filter(target => target.name);
+  if (Array.isArray(input.fixedTargets)) {
 
+    data.fixedTargets =
+      input.fixedTargets
+        .map(normalizeFixed)
+        .filter(
+          target => target.name
+        );
+
+  }
+
+
+  if (
+    input.tasks &&
+    typeof input.tasks === "object"
+  ) {
+
+    for (
+      const [date, list]
+      of Object.entries(input.tasks)
+    ) {
+
+      if (Array.isArray(list)) {
+
+        data.tasks[date] =
+          list
+            .map(
+              task =>
+                normalizeTask(
+                  task,
+                  date
+                )
+            )
+            .filter(
+              task => task.name
+            );
+
+      }
+
+    }
+
+  }
+
+
+  if (
+    input.studyByDate &&
+    typeof input.studyByDate === "object"
+  ) {
+
+    for (
+      const [date, value]
+      of Object.entries(
+        input.studyByDate
+      )
+    ) {
+
+      let seconds = 0;
+
+      if (
+        value &&
+        typeof value === "object"
+      ) {
+
+        seconds =
+          Number(
+            value.seconds ||
+            (
+              Number(value.minutes || 0) *
+              60
+            ) ||
+            0
+          );
+
+      } else {
+
+        seconds =
+          Number(value || 0);
+
+      }
+
+
+      if (
+        Number.isFinite(seconds) &&
+        seconds > 0
+      ) {
+
+        data.studyByDate[date] =
+          Math.round(seconds);
+
+      }
+
+    }
+
+  }
+
+
+  if (
+    input.completedDays &&
+    typeof input.completedDays === "object"
+  ) {
+
+    data.completedDays = {
+      ...input.completedDays
+    };
+
+  }
+
+
+  if (
+    input.notified &&
+    typeof input.notified === "object"
+  ) {
+
+    data.notified = {
+      ...input.notified
+    };
+
+  }
+
+
+  return data;
 }
 
-if (
-input.tasks &&
-typeof input.tasks === "object"
-) {
-
-for (  
-  const [date, list]  
-  of Object.entries(input.tasks)  
-) {  
-
-  if (Array.isArray(list)) {  
-
-    data.tasks[date] =  
-      list  
-        .map(task =>  
-          normalizeTask(task, date)  
-        )  
-        .filter(task => task.name);  
-
-  }  
-
-}
-
-}
-
-if (
-input.studyByDate &&
-typeof input.studyByDate === "object"
-) {
-
-for (  
-  const [date, value]  
-  of Object.entries(input.studyByDate)  
-) {  
-
-  const seconds =  
-    typeof value === "object"  
-
-      ? Number(  
-          value.seconds ||  
-          value.minutes * 60 ||  
-          0  
-        )  
-
-      : Number(value);  
-
-
-  if (seconds > 0) {  
-
-    data.studyByDate[date] =  
-      Math.round(seconds);  
-
-  }  
-
-}
-
-}
-
-data.completedDays = {
-...(input.completedDays || {})
-};
-
-data.notified = {
-...(input.notified || {})
-};
-
-return data;
-}
 
 // =========================================================
 // OLD DATA MIGRATION
@@ -285,222 +364,288 @@ return data;
 
 function migrateData() {
 
-let currentData = null;
+  let currentData = null;
 
-try {
+  try {
 
-currentData =  
-  JSON.parse(  
-    localStorage.getItem(STORAGE_KEY) ||  
-    "null"  
-  );
+    currentData =
+      JSON.parse(
+        localStorage.getItem(
+          STORAGE_KEY
+        ) || "null"
+      );
 
-} catch (_) {}
+  } catch (_) {
 
-if (currentData) {
+    currentData = null;
 
-return normalizeData(currentData);
+  }
 
+
+  if (currentData) {
+
+    return normalizeData(
+      currentData
+    );
+
+  }
+
+
+  for (const key of OLD_KEYS) {
+
+    try {
+
+      const old =
+        JSON.parse(
+          localStorage.getItem(key) ||
+          "null"
+        );
+
+
+      if (!old) {
+        continue;
+      }
+
+
+      const migrated =
+        emptyData();
+
+
+      // Fixed targets
+
+      if (
+        Array.isArray(
+          old.fixedTargets
+        )
+      ) {
+
+        migrated.fixedTargets =
+          old.fixedTargets
+            .map(normalizeFixed)
+            .filter(
+              target => target.name
+            );
+
+      }
+
+      else if (
+        old.fixedTarget &&
+        old.fixedTarget.name
+      ) {
+
+        migrated.fixedTargets.push(
+          normalizeFixed(
+            old.fixedTarget
+          )
+        );
+
+      }
+
+
+      // New-style tasks
+
+      if (
+        old.tasks &&
+        typeof old.tasks === "object"
+      ) {
+
+        for (
+          const [date, list]
+          of Object.entries(old.tasks)
+        ) {
+
+          if (
+            Array.isArray(list)
+          ) {
+
+            migrated.tasks[date] =
+              list
+                .map(
+                  task =>
+                    normalizeTask(
+                      task,
+                      date
+                    )
+                )
+                .filter(
+                  task => task.name
+                );
+
+          }
+
+        }
+
+      }
+
+
+      // Old single daily target
+
+      if (
+        old.dailyTarget &&
+        old.dailyTarget.name
+      ) {
+
+        const date =
+          old.dailyTarget.date ||
+          todayKey();
+
+
+        migrated.tasks[date] =
+          migrated.tasks[date] || [];
+
+
+        migrated.tasks[date].push(
+          normalizeTask(
+            {
+              name:
+                old.dailyTarget.name,
+
+              time:
+                old.dailyTarget.time,
+
+              completed:
+                old.dailyTarget.completed,
+
+              date
+            },
+            date
+          )
+        );
+
+      }
+
+
+      // Study history
+
+      if (
+        old.studyByDate &&
+        typeof old.studyByDate === "object"
+      ) {
+
+        migrated.studyByDate = {
+          ...old.studyByDate
+        };
+
+      }
+
+      else if (
+        old.studyTimeByDate &&
+        typeof old.studyTimeByDate === "object"
+      ) {
+
+        migrated.studyByDate = {
+          ...old.studyTimeByDate
+        };
+
+      }
+
+
+      // Completed days
+
+      if (
+        old.completedDays &&
+        typeof old.completedDays === "object"
+      ) {
+
+        migrated.completedDays = {
+          ...old.completedDays
+        };
+
+      }
+
+
+      // Streak information
+
+      if (
+        Number.isFinite(
+          Number(old.bestStreak)
+        )
+      ) {
+
+        migrated.bestStreak =
+          Number(old.bestStreak);
+
+      }
+
+
+      if (
+        Number.isFinite(
+          Number(old.streak)
+        )
+      ) {
+
+        migrated.streak =
+          Number(old.streak);
+
+      }
+
+
+      return normalizeData(
+        migrated
+      );
+
+    } catch (_) {
+
+      // Try the next old storage key.
+
+    }
+
+  }
+
+
+  return emptyData();
 }
 
-for (const key of OLD_KEYS) {
-
-try {  
-
-  const old =  
-    JSON.parse(  
-      localStorage.getItem(key) ||  
-      "null"  
-    );  
-
-
-  if (!old) continue;  
-
-
-  const migrated =  
-    emptyData();  
-
-
-  // Fixed targets  
-
-  if (Array.isArray(old.fixedTargets)) {  
-
-    migrated.fixedTargets =  
-      old.fixedTargets  
-        .map(normalizeFixed)  
-        .filter(target => target.name);  
-
-  }  
-
-  else if (  
-    old.fixedTarget &&  
-    old.fixedTarget.name  
-  ) {  
-
-    migrated.fixedTargets.push(  
-      normalizeFixed(old.fixedTarget)  
-    );  
-
-  }  
-
-
-  // New-style task storage  
-
-  if (  
-    old.tasks &&  
-    typeof old.tasks === "object"  
-  ) {  
-
-    for (  
-      const [date, list]  
-      of Object.entries(old.tasks)  
-    ) {  
-
-      if (Array.isArray(list)) {  
-
-        migrated.tasks[date] =  
-          list  
-            .map(task =>  
-              normalizeTask(task, date)  
-            )  
-            .filter(task => task.name);  
-
-      }  
-
-    }  
-
-  }  
-
-
-  // Old single daily target  
-
-  if (  
-    old.dailyTarget &&  
-    old.dailyTarget.name  
-  ) {  
-
-    const date =  
-      old.dailyTarget.date ||  
-      todayKey();  
-
-
-    migrated.tasks[date] =  
-      migrated.tasks[date] || [];  
-
-
-    migrated.tasks[date].push(  
-      normalizeTask(  
-        {  
-          name:  
-            old.dailyTarget.name,  
-
-          time:  
-            old.dailyTarget.time,  
-
-          completed:  
-            old.dailyTarget.completed,  
-
-          date  
-        },  
-        date  
-      )  
-    );  
-
-  }  
-
-
-  // Study history  
-
-  if (  
-    old.studyByDate &&  
-    typeof old.studyByDate === "object"  
-  ) {  
-
-    migrated.studyByDate =  
-      {  
-        ...old.studyByDate  
-      };  
-
-  }  
-
-  else if (  
-    old.studyTimeByDate &&  
-    typeof old.studyTimeByDate === "object"  
-  ) {  
-
-    migrated.studyByDate =  
-      {  
-        ...old.studyTimeByDate  
-      };  
-
-  }  
-
-
-  // Completed days  
-
-  if (  
-    old.completedDays &&  
-    typeof old.completedDays === "object"  
-  ) {  
-
-    migrated.completedDays =  
-      {  
-        ...old.completedDays  
-      };  
-
-  }  
-
-
-  if (  
-    Number.isFinite(old.bestStreak)  
-  ) {  
-
-    migrated.bestStreak =  
-      old.bestStreak;  
-
-  }  
-
-
-  return normalizeData(migrated);  
-
-} catch (_) {}
-
-}
-
-return emptyData();
-}
 
 let data = migrateData();
+
 
 // =========================================================
 // APPLICATION STATE
 // =========================================================
 
-let plannerDate = todayKey();
+let plannerDate =
+  todayKey();
 
-let reminderTimer = null;
+let reminderTimer =
+  null;
 
-let notificationCheckTimer = null;
+let notificationCheckTimer =
+  null;
+
+
+// =========================================================
+// TIMER STATE
+// =========================================================
 
 const timer = {
 
-mode: "stopwatch",
+  mode:
+    "stopwatch",
 
-running: false,
+  running:
+    false,
 
-startedAt: null,
+  startedAt:
+    null,
 
-elapsedMs: 0,
+  elapsedMs:
+    0,
 
-savedMs: 0,
+  savedMs:
+    0,
 
-countdownDurationMs: 0,
+  countdownDurationMs:
+    0,
 
-countdownRemainingMs: 0,
+  countdownRemainingMs:
+    0,
 
-lastDisplaySecond: -1
+  lastDisplaySecond:
+    -1
 
 };
+
 
 // =========================================================
 // STORAGE
@@ -508,59 +653,90 @@ lastDisplaySecond: -1
 
 function save() {
 
-localStorage.setItem(
-STORAGE_KEY,
-JSON.stringify(data)
-);
+  try {
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(data)
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Could not save application data:",
+      error
+    );
+
+  }
 
 }
+
 
 // =========================================================
 // TASK HELPERS
 // =========================================================
 
-function getTasks(date = todayKey()) {
+function getTasks(
+  date = todayKey()
+) {
 
-return Array.isArray(data.tasks[date])
-? data.tasks[date]
-: [];
-
-}
-
-function setTasks(date, tasks) {
-
-if (tasks.length) {
-
-data.tasks[date] = tasks;
+  return Array.isArray(
+    data.tasks[date]
+  )
+    ? data.tasks[date]
+    : [];
 
 }
 
-else {
 
-delete data.tasks[date];
+function setTasks(
+  date,
+  tasks
+) {
+
+  if (
+    Array.isArray(tasks) &&
+    tasks.length > 0
+  ) {
+
+    data.tasks[date] =
+      tasks;
+
+  } else {
+
+    delete data.tasks[date];
+
+  }
+
+}
+
+
+function getStudySeconds(
+  date = todayKey()
+) {
+
+  return Number(
+    data.studyByDate[date] || 0
+  );
 
 }
 
-}
 
-function getStudySeconds(date = todayKey()) {
+function formatTaskSummary(
+  tasks
+) {
 
-return Number(
-data.studyByDate[date] || 0
-);
+  const completed =
+    tasks.filter(
+      task =>
+        task.completed
+    ).length;
 
-}
 
-function formatTaskSummary(tasks) {
-
-const completed =
-tasks.filter(
-task => task.completed
-).length;
-
-return ${completed} / ${tasks.length} completed;
+  return `${completed} / ${tasks.length} completed`;
 
 }
+
 
 // =========================================================
 // FIXED TARGET DAILY RESET
@@ -568,140 +744,188 @@ return ${completed} / ${tasks.length} completed;
 
 function resetFixedTargetsForToday() {
 
-const today = todayKey();
+  const today =
+    todayKey();
 
-let changed = false;
+  let changed =
+    false;
 
-data.fixedTargets.forEach(target => {
 
-if (  
-  target.completedDate !== today  
-) {  
+  data.fixedTargets.forEach(
+    target => {
 
-  target.completed = false;  
+      if (
+        target.completedDate !==
+        today
+      ) {
 
-  target.completedDate = today;  
+        target.completed =
+          false;
 
-  changed = true;  
+        target.completedDate =
+          today;
+
+        changed =
+          true;
+
+      }
+
+    }
+  );
+
+
+  if (changed) {
+
+    save();
+
+  }
 
 }
 
-});
-
-if (changed) {
-
-save();
-
-}
-
-}
 
 // =========================================================
 // STREAK
 // =========================================================
 
-function updateDayCompletion(date) {
+function updateDayCompletion(
+  date
+) {
 
-const tasks =
-getTasks(date);
+  const tasks =
+    getTasks(date);
 
-const fixedCount =
-data.fixedTargets.length;
 
-const fixedDone =
-data.fixedTargets.filter(
-target => target.completed
-).length;
+  const fixedCount =
+    data.fixedTargets.length;
 
-const hasItems =
-tasks.length > 0 ||
-fixedCount > 0;
 
-const complete =
-hasItems &&
-tasks.every(
-task => task.completed
-) &&
-fixedDone === fixedCount;
+  const fixedDone =
+    data.fixedTargets.filter(
+      target =>
+        target.completed
+    ).length;
 
-if (complete) {
 
-data.completedDays[date] = true;
+  const hasItems =
+    tasks.length > 0 ||
+    fixedCount > 0;
+
+
+  const tasksComplete =
+    tasks.length === 0 ||
+    tasks.every(
+      task =>
+        task.completed
+    );
+
+
+  const complete =
+    hasItems &&
+    tasksComplete &&
+    fixedDone === fixedCount;
+
+
+  if (complete) {
+
+    data.completedDays[date] =
+      true;
+
+  } else {
+
+    delete data.completedDays[date];
+
+  }
+
+
+  updateStreak();
+
+  save();
 
 }
 
-else {
-
-delete data.completedDays[date];
-
-}
-
-updateStreak();
-
-save();
-
-}
 
 function updateStreak() {
 
-let current = 0;
+  let current =
+    0;
 
-let misses = 0;
+  let misses =
+    0;
 
-const previousBest =
-Number(data.bestStreak || 0);
-
-const date = new Date();
-
-while (true) {
-
-const key =  
-  `${date.getFullYear()}-${String(  
-    date.getMonth() + 1  
-  ).padStart(2, "0")}-${String(  
-    date.getDate()  
-  ).padStart(2, "0")`;  
+  const previousBest =
+    Number(
+      data.bestStreak || 0
+    );
 
 
-if (data.completedDays[key]) {  
-
-  current++;  
-
-  misses = 0;  
-
-}  
-
-else {  
-
-  misses++;  
-
-  // One missed day is allowed.  
-  // Two consecutive missed days break the streak.  
-
-  if (misses >= 2) {  
-
-    break;  
-
-  }  
-
-}  
+  const date =
+    new Date();
 
 
-date.setDate(  
-  date.getDate() - 1  
-);
+  while (true) {
+
+    const key =
+      `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}-${String(
+        date.getDate()
+      ).padStart(2, "0")}`;
+
+
+    if (
+      data.completedDays[key]
+    ) {
+
+      current++;
+      misses = 0;
+
+    } else {
+
+      misses++;
+
+
+      // One missed day is allowed.
+      // Two consecutive missed days break the streak.
+
+      if (
+        misses >= 2
+      ) {
+
+        break;
+
+      }
+
+    }
+
+
+    date.setDate(
+      date.getDate() - 1
+    );
+
+  }
+
+
+  data.streak =
+    current;
+
+  data.bestStreak =
+    Math.max(
+      previousBest,
+      current
+    );
 
 }
 
-data.streak = current;
 
-data.bestStreak =
-Math.max(
-previousBest,
-current
-);
+// =========================================================
+// END OF PART 1
+// =========================================================
 
-}
+// =========================================================
+// DAILY TARGET — FINAL JAVASCRIPT
+// PART 2 OF 3
+// =========================================================
+
 
 // =========================================================
 // MAIN DASHBOARD
@@ -709,237 +933,288 @@ current
 
 function updateMainUI() {
 
-resetFixedTargetsForToday();
+  resetFixedTargetsForToday();
 
-const today =
-todayKey();
 
-const tasks =
-getTasks(today);
+  const today =
+    todayKey();
 
-const fixed =
-data.fixedTargets;
 
-const taskDone =
-tasks.filter(
-task => task.completed
-).length;
+  const tasks =
+    getTasks(today);
 
-const fixedDone =
-fixed.filter(
-target => target.completed
-).length;
 
-const total =
-tasks.length +
-fixed.length;
+  const fixed =
+    data.fixedTargets;
 
-const completed =
-taskDone +
-fixedDone;
 
-const percent =
-total
-? Math.round(
-completed /
-total *
-100
-)
-: 0;
+  const taskDone =
+    tasks.filter(
+      task => task.completed
+    ).length;
 
-if ($("todayDate")) {
 
-$("todayDate").textContent =  
-  formatDateLong(today);
+  const fixedDone =
+    fixed.filter(
+      target => target.completed
+    ).length;
 
-}
 
-if ($("bestStreak")) {
+  const total =
+    tasks.length +
+    fixed.length;
 
-$("bestStreak").textContent =  
-  data.bestStreak;
 
-}
+  const completed =
+    taskDone +
+    fixedDone;
 
-if ($("progressPercent")) {
 
-$("progressPercent").textContent =  
-  `${percent}%`;
+  const percent =
+    total > 0
+      ? Math.round(
+          completed / total * 100
+        )
+      : 0;
 
-}
 
-if ($("progressFill")) {
+  if ($("todayDate")) {
 
-$("progressFill").style.width =  
-  `${percent}%`;
+    $("todayDate").textContent =
+      formatDateLong(today);
 
-}
+  }
 
-if ($("progressText")) {
 
-$("progressText").textContent =  
-  `${completed} of ${total} completed`;
+  if ($("bestStreak")) {
 
-}
+    $("bestStreak").textContent =
+      data.bestStreak;
 
-const firstTask =
-tasks.find(
-task => task.time
-) ||
-tasks[0];
+  }
 
-if ($("dailyTargetName")) {
 
-$("dailyTargetName").textContent =  
-  tasks.length  
-    ? `${tasks.length} task${  
-        tasks.length === 1  
-          ? ""  
-          : "s"  
-      } planned`  
-    : "No tasks planned";
+  if ($("progressPercent")) {
 
-}
+    $("progressPercent").textContent =
+      `${percent}%`;
 
-if ($("dailyTargetTime")) {
+  }
 
-$("dailyTargetTime").textContent =  
-  firstTask  
-    ? `📋 ${firstTask.name}: ${formatTime(  
-        firstTask.time  
-      )}`  
-    : "No task planned";
 
-}
+  if ($("progressFill")) {
 
-if ($("regularTargetProgress")) {
+    $("progressFill").style.width =
+      `${percent}%`;
 
-$("regularTargetProgress").textContent =  
-  `${taskDone} / ${tasks.length} completed`;
+  }
 
-}
 
-if ($("dailyStatus")) {
+  if ($("progressText")) {
 
-$("dailyStatus").textContent =  
-  tasks.length &&  
-  taskDone === tasks.length  
+    $("progressText").textContent =
+      `${completed} of ${total} completed`;
 
-    ? "✓ All tasks completed"  
+  }
 
-    : tasks.length  
 
-      ? `${tasks.length - taskDone} task${  
-          tasks.length - taskDone === 1  
-            ? ""  
-            : "s"  
-        } remaining`  
+  const firstTask =
+    tasks.find(
+      task => task.time
+    ) ||
+    tasks[0];
 
-      : "No tasks planned";
 
-}
+  if ($("dailyTargetName")) {
 
-$("dailyStatus")?.classList.toggle(
-"done",
-tasks.length > 0 &&
-taskDone === tasks.length
-);
+    $("dailyTargetName").textContent =
+      tasks.length
+        ? `${tasks.length} task${
+            tasks.length === 1
+              ? ""
+              : "s"
+          } planned`
+        : "No tasks planned";
 
-// Fixed targets
+  }
 
-if ($("fixedTargetName")) {
 
-$("fixedTargetName").textContent =  
-  fixed.length  
-    ? `${fixed.length} fixed target${  
-        fixed.length === 1  
-          ? ""  
-          : "s"  
-      }`  
-    : "No fixed targets";
+  if ($("dailyTargetTime")) {
 
-}
+    $("dailyTargetTime").textContent =
+      firstTask
+        ? `📋 ${firstTask.name}: ${formatTime(
+            firstTask.time
+          )}`
+        : "No task planned";
 
-const firstFixed =
-fixed.find(
-target => target.time
-) ||
-fixed[0];
+  }
 
-if ($("fixedTargetTime")) {
 
-$("fixedTargetTime").textContent =  
-  firstFixed  
-    ? `⏰ ${firstFixed.name}: ${formatTime(  
-        firstFixed.time  
-      )}`  
-    : "No fixed targets";
+  if ($("regularTargetProgress")) {
 
-}
+    $("regularTargetProgress").textContent =
+      `${taskDone} / ${tasks.length} completed`;
 
-if ($("fixedStatus")) {
+  }
 
-$("fixedStatus").textContent =  
-  fixed.length &&  
-  fixedDone === fixed.length  
 
-    ? "✓ All completed"  
+  if ($("dailyStatus")) {
 
-    : fixed.length  
+    if (
+      tasks.length > 0 &&
+      taskDone === tasks.length
+    ) {
 
-      ? `${fixed.length - fixedDone} remaining`  
+      $("dailyStatus").textContent =
+        "✓ All tasks completed";
 
-      : "No fixed targets";
+    } else if (
+      tasks.length > 0
+    ) {
 
-}
+      const remaining =
+        tasks.length - taskDone;
 
-$("fixedStatus")?.classList.toggle(
-"done",
-fixed.length > 0 &&
-fixedDone === fixed.length
-);
+      $("dailyStatus").textContent =
+        `${remaining} task${
+          remaining === 1
+            ? ""
+            : "s"
+        } remaining`;
 
-// Study time
+    } else {
 
-if ($("studyTimeToday")) {
+      $("dailyStatus").textContent =
+        "No tasks planned";
 
-$("studyTimeToday").textContent =  
-  formatMinutes(  
-    getStudySeconds(today)  
+    }
+
+  }
+
+
+  $("dailyStatus")?.classList.toggle(
+    "done",
+    tasks.length > 0 &&
+    taskDone === tasks.length
   );
 
-}
 
-// Summary
+  // Fixed targets
 
-if ($("todayTaskSummary")) {
+  if ($("fixedTargetName")) {
 
-$("todayTaskSummary").textContent =  
-  formatTaskSummary(tasks);
+    $("fixedTargetName").textContent =
+      fixed.length
+        ? `${fixed.length} fixed target${
+            fixed.length === 1
+              ? ""
+              : "s"
+          }`
+        : "No fixed targets";
 
-}
+  }
 
-if ($("todayStudySummary")) {
 
-$("todayStudySummary").textContent =  
-  formatMinutes(  
-    getStudySeconds(today)  
+  const firstFixed =
+    fixed.find(
+      target => target.time
+    ) ||
+    fixed[0];
+
+
+  if ($("fixedTargetTime")) {
+
+    $("fixedTargetTime").textContent =
+      firstFixed
+        ? `⏰ ${firstFixed.name}: ${formatTime(
+            firstFixed.time
+          )}`
+        : "No fixed targets";
+
+  }
+
+
+  if ($("fixedStatus")) {
+
+    if (
+      fixed.length > 0 &&
+      fixedDone === fixed.length
+    ) {
+
+      $("fixedStatus").textContent =
+        "✓ All completed";
+
+    } else if (
+      fixed.length > 0
+    ) {
+
+      $("fixedStatus").textContent =
+        `${fixed.length - fixedDone} remaining`;
+
+    } else {
+
+      $("fixedStatus").textContent =
+        "No fixed targets";
+
+    }
+
+  }
+
+
+  $("fixedStatus")?.classList.toggle(
+    "done",
+    fixed.length > 0 &&
+    fixedDone === fixed.length
   );
 
+
+  // Study time
+
+  if ($("studyTimeToday")) {
+
+    $("studyTimeToday").textContent =
+      formatMinutes(
+        getStudySeconds(today)
+      );
+
+  }
+
+
+  // Summary
+
+  if ($("todayTaskSummary")) {
+
+    $("todayTaskSummary").textContent =
+      formatTaskSummary(tasks);
+
+  }
+
+
+  if ($("todayStudySummary")) {
+
+    $("todayStudySummary").textContent =
+      formatMinutes(
+        getStudySeconds(today)
+      );
+
+  }
+
+
+  if ($("todayFixedSummary")) {
+
+    $("todayFixedSummary").textContent =
+      `${fixedDone} / ${fixed.length} completed`;
+
+  }
+
+
+  updateHistory();
+
+  updateNotificationButton();
+
 }
 
-if ($("todayFixedSummary")) {
-
-$("todayFixedSummary").textContent =  
-  `${fixedDone} / ${fixed.length} completed`;
-
-}
-
-updateHistory();
-
-updateNotificationButton();
-
-}
 
 // =========================================================
 // 7-DAY HISTORY
@@ -947,3227 +1222,106 @@ updateNotificationButton();
 
 function updateHistory() {
 
-const container =
-$("history");
+  const container =
+    $("history");
 
-if (!container) return;
 
-container.innerHTML = "";
+  if (!container) {
+    return;
+  }
 
-for (let i = 0; i < 7; i++) {
 
-const date =  
-  new Date();  
+  container.innerHTML =
+    "";
 
 
-date.setDate(  
-  date.getDate() - i  
-);  
+  for (
+    let i = 0;
+    i < 7;
+    i++
+  ) {
 
+    const date =
+      new Date();
 
-const key =  
-  `${date.getFullYear()}-${String(  
-    date.getMonth() + 1  
-  ).padStart(2, "0")}-${String(  
-    date.getDate()  
-  ).padStart(2, "0")`;  
 
+    date.setDate(
+      date.getDate() - i
+    );
 
-const tasks =  
-  getTasks(key);  
 
+    const key =
+      `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}-${String(
+        date.getDate()
+      ).padStart(2, "0")}`;
 
-const completed =  
-  tasks.filter(  
-    task => task.completed  
-  ).length;  
 
+    const tasks =
+      getTasks(key);
 
-const study =  
-  getStudySeconds(key);  
 
+    const completed =
+      tasks.filter(
+        task =>
+          task.completed
+      ).length;
 
-const label =  
-  i === 0  
 
-    ? "Today"  
+    const study =
+      getStudySeconds(key);
 
-    : date.toLocaleDateString(  
-        "en-IN",  
-        {  
-          weekday: "short",  
-          day: "numeric",  
-          month: "short"  
-        }  
-      );  
 
+    const label =
+      i === 0
+        ? "Today"
+        : date.toLocaleDateString(
+            "en-IN",
+            {
+              weekday: "short",
+              day: "numeric",
+              month: "short"
+            }
+          );
 
-const row =  
-  document.createElement("div");  
 
+    const row =
+      document.createElement(
+        "div"
+      );
 
-row.className =  
-  "history-row";  
 
+    row.className =
+      "history-row";
 
-row.innerHTML = `  
-  <span class="history-day">  
-    ${escapeHtml(label)}  
-  </span>  
 
-  <span class="history-status">  
-    ${  
-      tasks.length  
-        ? `${completed}/${tasks.length}`  
-        : "—"  
-    }  
-    ·  
-    ${formatMinutes(study)}  
-  </span>  
-`;  
+    row.innerHTML = `
+      <span class="history-day">
+        ${escapeHtml(label)}
+      </span>
 
+      <span class="history-status">
+        ${
+          tasks.length
+            ? `${completed}/${tasks.length}`
+            : "—"
+        }
+        ·
+        ${formatMinutes(study)}
+      </span>
+    `;
 
-container.appendChild(row);
 
-}
-
-}
-
-// =========================================================
-// FULL INTERFACE MANAGEMENT
-// =========================================================
-
-function showView(id) {
-
-[
-"regularTasksView",
-"regularPlanner",
-"fixedTargetsView",
-"weeklyStatsView"
-].forEach(viewId => {
-
-$(viewId)?.classList.add(  
-  "hidden"  
-);
-
-});
-
-$(id)?.classList.remove(
-"hidden"
-);
-
-document.body.style.overflow =
-"hidden";
-
-}
-
-function closeAllViews() {
-
-[
-"regularTasksView",
-"regularPlanner",
-"fixedTargetsView",
-"weeklyStatsView"
-].forEach(viewId => {
-
-$(viewId)?.classList.add(  
-  "hidden"  
-);
-
-});
-
-document.body.style.overflow =
-"";
-
-}
-
-// =========================================================
-// REGULAR TASKS INTERFACE
-// =========================================================
-
-function openRegularTasks() {
-
-renderRegularTasks();
-
-showView(
-"regularTasksView"
-);
-
-}
-
-function renderRegularTasks() {
-
-const date =
-todayKey();
-
-const tasks =
-getTasks(date);
-
-if ($("regularTasksDate")) {
-
-$("regularTasksDate").textContent =  
-  formatDateLong(date);
-
-}
-
-if ($("regularTasksCount")) {
-
-$("regularTasksCount").textContent =  
-  `${tasks.length} task${  
-    tasks.length === 1  
-      ? ""  
-      : "s"  
-  }`;
-
-}
-
-const completed =
-tasks.filter(
-task => task.completed
-).length;
-
-if ($("regularTasksProgress")) {
-
-$("regularTasksProgress").textContent =  
-  `${completed} / ${tasks.length}`;
-
-}
-
-if ($("regularTasksProgressFill")) {
-
-$("regularTasksProgressFill").style.width =  
-  `${tasks.length  
-    ? completed / tasks.length * 100  
-    : 0}%`;
-
-}
-
-const list =
-$("regularTasksList");
-
-if (!list) return;
-
-list.innerHTML = "";
-
-if (!tasks.length) {
-
-list.innerHTML = `  
-  <div class="empty-state">  
-    <strong>No tasks planned</strong>  
-    <span>Add your first regular task.</span>  
-  </div>  
-`;  
-
-return;
-
-}
-
-const sortedTasks =
-[...tasks].sort(
-(a, b) =>
-(a.time || "99:99")
-.localeCompare(
-b.time || "99:99"
-)
-);
-
-sortedTasks.forEach(task => {
-
-const row =  
-  document.createElement("div");  
-
-
-row.className =  
-  `task-row${  
-    task.completed  
-      ? " completed"  
-      : ""  
-  }`;  
-
-
-row.innerHTML = `  
-  <input  
-    class="task-checkbox"  
-    type="checkbox"  
-    ${  
-      task.completed  
-        ? "checked"  
-        : ""  
-    }  
-    aria-label="Complete task"  
-  >  
-
-  <div class="task-row-content">  
-
-    <div class="task-row-name">  
-      ${escapeHtml(task.name)}  
-    </div>  
-
-    <div class="task-row-time">  
-      ${  
-        task.time  
-          ? formatTime(task.time)  
-          : "No time set"  
-      }  
-    </div>  
-
-  </div>  
-
-  <button  
-    class="task-delete-button"  
-    type="button"  
-    title="Delete task"  
-  >  
-    ×  
-  </button>  
-`;  
-
-
-row  
-  .querySelector(".task-checkbox")  
-  .addEventListener(  
-    "change",  
-    event => {  
-
-      task.completed =  
-        event.target.checked;  
-
-
-      setTasks(  
-        date,  
-        tasks  
-      );  
-
-
-      updateDayCompletion(  
-        date  
-      );  
-
-
-      renderRegularTasks();  
-
-      updateMainUI();  
-
-
-      if (task.completed) {  
-
-        stopReminderForTask(  
-          task.id  
-        );  
-
-      }  
-
-    }  
-  );  
-
-
-row  
-  .querySelector(".task-delete-button")  
-  .addEventListener(  
-    "click",  
-    () => {  
-
-      if (  
-        !confirm(  
-          `Delete "${task.name}"?`  
-        )  
-      ) {  
-        return;  
-      }  
-
-
-      setTasks(  
-        date,  
-        tasks.filter(  
-          item =>  
-            item.id !== task.id  
-        )  
-      );  
-
-
-      updateDayCompletion(  
-        date  
-      );  
-
-
-      renderRegularTasks();  
-
-      updateMainUI();  
-
-    }  
-  );  
-
-
-list.appendChild(row);
-
-});
-
-}
-
-// =========================================================
-// REGULAR TASK PLANNER
-// =========================================================
-
-function openPlanner() {
-
-plannerDate =
-todayKey();
-
-if ($("plannerDate")) {
-
-$("plannerDate").value =  
-  plannerDate;
-
-}
-
-renderPlanner();
-
-showView(
-"regularPlanner"
-);
-
-}
-
-function renderPlanner() {
-
-const date =
-$("plannerDate")?.value ||
-plannerDate ||
-todayKey();
-
-plannerDate =
-date;
-
-const list =
-$("plannerTasksList");
-
-if (!list) return;
-
-list.innerHTML = "";
-
-const tasks =
-getTasks(date);
-
-if (!tasks.length) {
-
-list.innerHTML = `  
-  <div class="empty-state">  
-    <strong>No tasks for this date</strong>  
-    <span>Use Add to create one.</span>  
-  </div>  
-`;  
-
-return;
-
-}
-
-tasks.forEach(task => {
-
-const row =  
-  document.createElement("div");  
-
-
-row.className =  
-  "task-row";  
-
-
-row.innerHTML = `  
-  <div class="task-row-content">  
-
-    <div class="task-row-name">  
-      ${escapeHtml(task.name)}  
-    </div>  
-
-    <div class="task-row-time">  
-      ${  
-        task.time  
-          ? formatTime(task.time)  
-          : "No time set"  
-      }  
-    </div>  
-
-  </div>  
-
-  <button  
-    class="task-delete-button"  
-    type="button"  
-  >  
-    ×  
-  </button>  
-`;  
-
-
-row  
-  .querySelector("button")  
-  .addEventListener(  
-    "click",  
-    () => {  
-
-      setTasks(  
-        date,  
-        tasks.filter(  
-          item =>  
-            item.id !== task.id  
-        )  
-      );  
-
-
-      save();  
-
-      renderPlanner();  
-
-      updateMainUI();  
-
-    }  
-  );  
-
-
-list.appendChild(row);
-
-});
-
-}
-
-// =========================================================
-// ADD TASK MODAL
-// =========================================================
-
-function openTaskModal(
-date = todayKey()
-) {
-
-if ($("taskNameInput")) {
-
-$("taskNameInput").value =  
-  "";
-
-}
-
-if ($("taskDateInput")) {
-
-$("taskDateInput").value =  
-  date;
-
-}
-
-if ($("taskTimeInput")) {
-
-$("taskTimeInput").value =  
-  "";
-
-}
-
-$("taskModal")?.classList.remove(
-"hidden"
-);
-
-setTimeout(
-() =>
-$("taskNameInput")?.focus(),
-50
-);
-
-}
-
-function closeTaskModal() {
-
-$("taskModal")?.classList.add(
-"hidden"
-);
-
-}
-
-function saveTask() {
-
-const name =
-$("taskNameInput")
-?.value
-.trim();
-
-const date =
-$("taskDateInput")
-?.value ||
-todayKey();
-
-const time =
-$("taskTimeInput")
-?.value ||
-"";
-
-if (!name) {
-
-alert(  
-  "Please enter a task name."  
-);  
-
-return;
-
-}
-
-if (!date) {
-
-alert(  
-  "Please select a date."  
-);  
-
-return;
-
-}
-
-const tasks =
-getTasks(date);
-
-tasks.push({
-
-id:  
-  makeId("task"),  
-
-name,  
-
-date,  
-
-time,  
-
-completed:  
-  false
-
-});
-
-setTasks(
-date,
-tasks
-);
-
-save();
-
-closeTaskModal();
-
-updateMainUI();
-
-renderPlanner();
-
-if (
-!$("regularTasksView")
-?.classList.contains(
-"hidden"
-)
-) {
-
-renderRegularTasks();
-
-}
-
-}
-
-// =========================================================
-// COMPLETE ALL REGULAR TASKS
-// =========================================================
-
-function completeAllRegular() {
-
-const date =
-todayKey();
-
-const tasks =
-getTasks(date);
-
-if (!tasks.length) {
-
-alert(  
-  "There are no regular tasks to complete."  
-);  
-
-return;
-
-}
-
-tasks.forEach(
-task =>
-task.completed = true
-);
-
-setTasks(
-date,
-tasks
-);
-
-updateDayCompletion(
-date
-);
-
-renderRegularTasks();
-
-updateMainUI();
-
-}
-
-// =========================================================
-// FIXED TARGETS INTERFACE
-// =========================================================
-
-function openFixedTargets() {
-
-renderFixedTargets();
-
-showView(
-"fixedTargetsView"
-);
-
-}
-
-function renderFixedTargets() {
-
-const list =
-$("fixedTargetsList");
-
-if (!list) return;
-
-list.innerHTML = "";
-
-if ($("fixedTargetsCount")) {
-
-$("fixedTargetsCount").textContent =  
-  `${data.fixedTargets.length} target${  
-    data.fixedTargets.length === 1  
-      ? ""  
-      : "s"  
-  }`;
-
-}
-
-if (!data.fixedTargets.length) {
-
-list.innerHTML = `  
-  <div class="empty-state">  
-    <strong>No fixed targets</strong>  
-    <span>Add a target that repeats every day.</span>  
-  </div>  
-`;  
-
-return;
-
-}
-
-data.fixedTargets.forEach(
-target => {
-
-const row =  
-    document.createElement("div");  
-
-
-  row.className =  
-    "fixed-target-row";  
-
-
-  row.innerHTML = `  
-    <div class="fixed-target-main">  
-
-      <input  
-        class="task-checkbox"  
-        type="checkbox"  
-        ${  
-          target.completed  
-            ? "checked"  
-            : ""  
-        }  
-        aria-label="Complete fixed target"  
-      >  
-
-      <div class="fixed-target-info">  
-
-        <div class="fixed-target-name">  
-          ${escapeHtml(target.name)}  
-        </div>  
-
-        <div class="fixed-target-time">  
-          ${  
-            target.time  
-              ? formatTime(target.time)  
-              : "No time set"  
-          }  
-        </div>  
-
-      </div>  
-
-    </div>  
-
-    <div class="fixed-target-actions">  
-
-      <button  
-        class="outline-button edit-fixed"  
-        type="button"  
-      >  
-        Edit  
-      </button>  
-
-      <button  
-        class="secondary-button delete-fixed"  
-        type="button"  
-      >  
-        Delete  
-      </button>  
-
-    </div>  
-  `;  
-
-
-  row  
-    .querySelector(".task-checkbox")  
-    .addEventListener(  
-      "change",  
-      event => {  
-
-        target.completed =  
-          event.target.checked;  
-
-
-        target.completedDate =  
-          event.target.checked  
-            ? todayKey()  
-            : "";  
-
-
-        save();  
-
-
-        updateDayCompletion(  
-          todayKey()  
-        );  
-
-
-        renderFixedTargets();  
-
-        updateMainUI();  
-
-      }  
-    );  
-
-
-  row  
-    .querySelector(".edit-fixed")  
-    .addEventListener(  
-      "click",  
-      () =>  
-        openTargetModal(  
-          "fixed",  
-          target.id  
-        )  
-    );  
-
-
-  row  
-    .querySelector(".delete-fixed")  
-    .addEventListener(  
-      "click",  
-      () => {  
-
-        if (  
-          !confirm(  
-            `Delete "${target.name}"?`  
-          )  
-        ) {  
-          return;  
-        }  
-
-
-        data.fixedTargets =  
-          data.fixedTargets.filter(  
-            item =>  
-              item.id !== target.id  
-          );  
-
-
-        save();  
-
-
-        renderFixedTargets();  
-
-        updateMainUI();  
-
-      }  
-    );  
-
-
-  list.appendChild(row);  
-
-}
-
-);
-
-}
-
-// =========================================================
-// FIXED TARGET MODAL
-// =========================================================
-
-let editingFixedId = null;
-
-function openTargetModal(
-type,
-id = null
-) {
-
-editingFixedId =
-type === "fixed"
-? id
-: null;
-
-const target =
-id
-? data.fixedTargets.find(
-item =>
-item.id === id
-)
-: null;
-
-if ($("modalTitle")) {
-
-$("modalTitle").textContent =  
-  type === "fixed"  
-
-    ? target  
-      ? "Edit Fixed Target"  
-      : "Add Fixed Target"  
-
-    : "Target";
-
-}
-
-if ($("targetInput")) {
-
-$("targetInput").value =  
-  target?.name || "";
-
-}
-
-if ($("timeInput")) {
-
-$("timeInput").value =  
-  target?.time || "";
-
-}
-
-$("modal")?.classList.remove(
-"hidden"
-);
-
-setTimeout(
-() =>
-$("targetInput")?.focus(),
-50
-);
-
-}
-
-function closeModal() {
-
-$("modal")?.classList.add(
-"hidden"
-);
-
-editingFixedId =
-null;
-
-}
-
-function saveTarget() {
-
-const name =
-$("targetInput")
-?.value
-.trim();
-
-const time =
-$("timeInput")
-?.value ||
-"";
-
-if (!name) {
-
-alert(  
-  "Please enter a target name."  
-);  
-
-return;
-
-}
-
-if (!time) {
-
-alert(  
-  "Please select a time."  
-);  
-
-return;
-
-}
-
-if (editingFixedId) {
-
-const target =  
-  data.fixedTargets.find(  
-    item =>  
-      item.id ===  
-      editingFixedId  
-  );  
-
-
-if (target) {  
-
-  target.name =  
-    name;  
-
-  target.time =  
-    time;  
-
-}
-
-}
-
-else {
-
-data.fixedTargets.push({  
-
-  id:  
-    makeId("fixed"),  
-
-  name,  
-
-  time,  
-
-  completed:  
-    false,  
-
-  completedDate:  
-    todayKey()  
-
-});
-
-}
-
-save();
-
-closeModal();
-
-renderFixedTargets();
-
-updateMainUI();
-
-}
-
-// =========================================================
-// WEEKLY STATISTICS
-// =========================================================
-
-function openWeeklyStats() {
-
-renderWeeklyStats();
-
-showView(
-"weeklyStatsView"
-);
-
-}
-
-function getWeekKeys() {
-
-const today =
-new Date();
-
-const day =
-today.getDay();
-
-const mondayOffset =
-day === 0
-? -6
-: 1 - day;
-
-const monday =
-new Date(today);
-
-monday.setDate(
-today.getDate() +
-mondayOffset
-);
-
-monday.setHours(
-0,
-0,
-0,
-0
-);
-
-return Array.from(
-{ length: 7 },
-(_, index) => {
-
-const date =  
-    new Date(monday);  
-
-
-  date.setDate(  
-    monday.getDate() +  
-    index  
-  );  
-
-
-  return `${date.getFullYear()}-${String(  
-    date.getMonth() + 1  
-  ).padStart(2, "0")}-${String(  
-    date.getDate()  
-  ).padStart(2, "0")}`;  
-
-}
-
-);
-
-}
-
-function renderWeeklyStats() {
-
-const keys =
-getWeekKeys();
-
-if ($("weeklyStatsDateRange")) {
-
-$("weeklyStatsDateRange").textContent =  
-  `${formatDateShort(  
-    keys[0]  
-  )} – ${formatDateShort(  
-    keys[6]  
-  )}`;
-
-}
-
-renderStudyChart(
-keys
-);
-
-renderStudyHistory(
-keys
-);
-
-renderTaskHistory(
-keys
-);
-
-}
-
-// =========================================================
-// WEEKLY STUDY HISTORY
-// =========================================================
-
-function renderStudyHistory(
-keys
-) {
-
-const container =
-$("weeklyStudyHistory");
-
-if (!container) return;
-
-container.innerHTML = "";
-
-const now =
-new Date();
-
-const actual =
-keys.filter(key => {
-
-const date =  
-    dateFromKey(key);  
-
-
-  return (  
-    date <= now &&  
-    getStudySeconds(key) > 0  
-  );  
-
-});
-
-if (!actual.length) {
-
-container.innerHTML = `  
-  <div class="empty-state">  
-    <strong>No study time recorded</strong>  
-    <span>  
-      Use the stopwatch, countdown,  
-      or manual entry.  
-    </span>  
-  </div>  
-`;  
-
-
-$("highestStudyTime").textContent =  
-  "—";  
-
-$("highestStudyDay").textContent =  
-  "—";  
-
-$("lowestStudyTime").textContent =  
-  "—";  
-
-$("lowestStudyDay").textContent =  
-  "—";  
-
-
-return;
-
-}
-
-actual.forEach(
-key => {
-
-const date =  
-    dateFromKey(key);  
-
-
-  const row =  
-    document.createElement(  
-      "div"  
-    );  
-
-
-  row.className =  
-    "weekly-history-row";  
-
-
-  row.innerHTML = `  
-    <span class="weekly-history-date">  
-      ${escapeHtml(  
-        date.toLocaleDateString(  
-          "en-IN",  
-          {  
-            weekday: "long",  
-            day: "numeric",  
-            month: "short"  
-          }  
-        )  
-      )}  
-    </span>  
-
-    <span class="weekly-history-value">  
-      ${formatMinutes(  
-        getStudySeconds(key)  
-      )}  
-    </span>  
-  `;  
-
-
-  container.appendChild(row);  
-
-}
-
-);
-
-const sorted =
-[...actual].sort(
-(a, b) =>
-getStudySeconds(b) -
-getStudySeconds(a)
-);
-
-const highest =
-sorted[0];
-
-const lowest =
-sorted[sorted.length - 1];
-
-$("highestStudyTime").textContent =
-formatMinutes(
-getStudySeconds(highest)
-);
-
-$("highestStudyDay").textContent =
-dateLabel(highest);
-
-$("lowestStudyTime").textContent =
-formatMinutes(
-getStudySeconds(lowest)
-);
-
-$("lowestStudyDay").textContent =
-dateLabel(lowest);
-
-}
-
-// =========================================================
-// WEEKLY TASK HISTORY
-// =========================================================
-
-function renderTaskHistory(
-keys
-) {
-
-const container =
-$("weeklyTaskHistory");
-
-if (!container) return;
-
-container.innerHTML = "";
-
-keys.forEach(
-key => {
-
-const date =  
-    dateFromKey(key);  
-
-
-  const tasks =  
-    getTasks(key);  
-
-
-  let value =  
-    "No tasks planned";  
-
-
-  if (tasks.length) {  
-
-    value =  
-      tasks.every(  
-        task =>  
-          task.completed  
-      )  
-
-        ? "All tasks completed"  
-
-        : `${tasks.filter(  
-            task =>  
-              task.completed  
-          ).length}/${tasks.length} completed · Incomplete`;  
-
-  }  
-
-
-  const row =  
-    document.createElement(  
-      "div"  
-    );  
-
-
-  row.className =  
-    "weekly-history-row";  
-
-
-  row.innerHTML = `  
-    <span class="weekly-history-date">  
-      ${escapeHtml(  
-        date.toLocaleDateString(  
-          "en-IN",  
-          {  
-            weekday: "long",  
-            day: "numeric",  
-            month: "short",  
-            year: "numeric"  
-          }  
-        )  
-      )}  
-    </span>  
-
-    <span class="weekly-history-value">  
-      ${escapeHtml(value)}  
-    </span>  
-  `;  
-
-
-  container.appendChild(row);  
-
-}
-
-);
-
-}
-
-// =========================================================
-// STUDY GRAPH
-// =========================================================
-
-function renderStudyChart(
-keys
-) {
-
-const canvas =
-$("studyChart");
-
-const empty =
-$("studyChartEmpty");
-
-if (!canvas) return;
-
-const now =
-new Date();
-
-const values =
-keys.map(key => {
-
-const date =  
-    dateFromKey(key);  
-
-
-  if (date > now) {  
-
-    return null;  
-
-  }  
-
-
-  const seconds =  
-    getStudySeconds(key);  
-
-
-  return seconds > 0  
-    ? seconds / 60  
-    : null;  
-
-});
-
-const hasData =
-values.some(
-value =>
-value !== null &&
-value > 0
-);
-
-empty?.classList.toggle(
-"hidden",
-hasData
-);
-
-canvas.style.display =
-hasData
-? "block"
-: "none";
-
-if (!hasData) return;
-
-const rect =
-canvas.getBoundingClientRect();
-
-const width =
-Math.max(
-300,
-Math.floor(
-rect.width || 700
-)
-);
-
-const height =
-320;
-
-const ratio =
-window.devicePixelRatio || 1;
-
-canvas.width =
-width * ratio;
-
-canvas.height =
-height * ratio;
-
-const context =
-canvas.getContext("2d");
-
-context.setTransform(
-ratio,
-0,
-0,
-ratio,
-0,
-0
-);
-
-context.clearRect(
-0,
-0,
-width,
-height
-);
-
-const padding = {
-
-left: 52,  
-
-right: 20,  
-
-top: 20,  
-
-bottom: 50
-
-};
-
-const plotWidth =
-width -
-padding.left -
-padding.right;
-
-const plotHeight =
-height -
-padding.top -
-padding.bottom;
-
-const numericValues =
-values.filter(
-value =>
-value !== null &&
-value > 0
-);
-
-const maximum =
-Math.max(
-1,
-Math.ceil(
-Math.max(
-...numericValues
-) * 1.2
-)
-);
-
-context.font =
-"12px system-ui, sans-serif";
-
-context.textAlign =
-"right";
-
-context.textBaseline =
-"middle";
-
-context.strokeStyle =
-"#e2e5e8";
-
-context.fillStyle =
-"#70757b";
-
-context.lineWidth =
-1;
-
-// Horizontal grid
-
-for (
-let i = 0;
-i <= 4;
-i++
-) {
-
-const y =  
-  padding.top +  
-  plotHeight -  
-  plotHeight *  
-    i /  
-    4;  
-
-
-context.beginPath();  
-
-context.moveTo(  
-  padding.left,  
-  y  
-);  
-
-context.lineTo(  
-  width -  
-    padding.right,  
-  y  
-);  
-
-context.stroke();  
-
-
-const label =  
-  Math.round(  
-    maximum *  
-    i /  
-    4  
-  );  
-
-
-context.fillText(  
-  `${label}`,  
-  padding.left - 9,  
-  y  
-);
-
-}
-
-// Y-axis label
-
-context.save();
-
-context.translate(
-15,
-padding.top +
-plotHeight / 2
-);
-
-context.rotate(
--Math.PI / 2
-);
-
-context.textAlign =
-"center";
-
-context.textBaseline =
-"middle";
-
-context.fillStyle =
-"#70757b";
-
-context.fillText(
-"Minutes",
-0,
-0
-);
-
-context.restore();
-
-// X-axis labels
-
-context.textAlign =
-"center";
-
-context.textBaseline =
-"top";
-
-keys.forEach(
-(key, index) => {
-
-const x =  
-    padding.left +  
-    (  
-      keys.length === 1  
-        ? plotWidth / 2  
-        : plotWidth *  
-          index /  
-          (keys.length - 1)  
-    );  
-
-
-  const date =  
-    dateFromKey(key);  
-
-
-  context.fillStyle =  
-    "#70757b";  
-
-
-  context.fillText(  
-    date.toLocaleDateString(  
-      "en-IN",  
-      {  
-        weekday: "short",  
-        day: "numeric"  
-      }  
-    ),  
-    x,  
-    height -  
-      padding.bottom +  
-      13  
-  );  
-
-}
-
-);
-
-// Draw separate line segments.
-// Missing days remain empty and do not create fake zero values.
-
-context.strokeStyle =
-"#15803d";
-
-context.lineWidth =
-3;
-
-let segmentOpen =
-false;
-
-values.forEach(
-(value, index) => {
-
-if (  
-    value === null ||  
-    value <= 0  
-  ) {  
-
-    segmentOpen =  
-      false;  
-
-    return;  
-
-  }  
-
-
-  const x =  
-    padding.left +  
-    (  
-      keys.length === 1  
-        ? plotWidth / 2  
-        : plotWidth *  
-          index /  
-          (keys.length - 1)  
-    );  
-
-
-  const y =  
-    padding.top +  
-    plotHeight -  
-    (  
-      value /  
-      maximum  
-    ) *  
-    plotHeight;  
-
-
-  if (!segmentOpen) {  
-
-    context.beginPath();  
-
-    context.moveTo(  
-      x,  
-      y  
-    );  
-
-    segmentOpen =  
-      true;  
-
-  }  
-
-  else {  
-
-    context.lineTo(  
-      x,  
-      y  
-    );  
-
-  }  
-
-
-  context.stroke();  
-
-}
-
-);
-
-// Points
-
-values.forEach(
-(value, index) => {
-
-if (  
-    value === null ||  
-    value <= 0  
-  ) {  
-    return;  
-  }  
-
-
-  const x =  
-    padding.left +  
-    (  
-      keys.length === 1  
-        ? plotWidth / 2  
-        : plotWidth *  
-          index /  
-          (keys.length - 1)  
-    );  
-
-
-  const y =  
-    padding.top +  
-    plotHeight -  
-    (  
-      value /  
-      maximum  
-    ) *  
-    plotHeight;  
-
-
-  context.beginPath();  
-
-
-  context.arc(  
-    x,  
-    y,  
-    5,  
-    0,  
-    Math.PI * 2  
-  );  
-
-
-  context.fillStyle =  
-    "#15803d";  
-
-
-  context.fill();  
-
-
-  context.beginPath();  
-
-
-  context.arc(  
-    x,  
-    y,  
-    8,  
-    0,  
-    Math.PI * 2  
-  );  
-
-
-  context.strokeStyle =  
-    "#15803d";  
-
-
-  context.lineWidth =  
-    1;  
-
-
-  context.stroke();  
-
-}
-
-);
-
-}
-
-// =========================================================
-// STUDY TIME STORAGE
-// =========================================================
-
-function addStudySeconds(
-seconds
-) {
-
-seconds =
-Math.max(
-0,
-Math.round(seconds)
-);
-
-if (!seconds) return;
-
-const date =
-todayKey();
-
-data.studyByDate[date] =
-getStudySeconds(date) +
-seconds;
-
-save();
-
-updateMainUI();
-
-}
-
-// =========================================================
-// TIMER DISPLAY
-// =========================================================
-
-function updateTimerDisplay() {
-
-let displayMs =
-timer.elapsedMs;
-
-if (
-timer.mode ===
-"countdown"
-) {
-
-displayMs =  
-  timer.countdownRemainingMs;
-
-}
-
-if (
-timer.running &&
-timer.startedAt !== null
-) {
-
-const delta =  
-  Date.now() -  
-  timer.startedAt;  
-
-
-if (  
-  timer.mode ===  
-  "countdown"  
-) {  
-
-  displayMs =  
-    Math.max(  
-      0,  
-      timer.countdownRemainingMs -  
-      delta  
-    );  
-
-}  
-
-else {  
-
-  displayMs =  
-    timer.elapsedMs +  
-    delta;  
-
-}
-
-}
-
-const second =
-Math.floor(
-displayMs / 1000
-);
-
-if (
-second !==
-timer.lastDisplaySecond
-) {
-
-timer.lastDisplaySecond =  
-  second;  
-
-
-if ($("timerDisplay")) {  
-
-  $("timerDisplay").textContent =  
-    formatClock(  
-      displayMs  
-    );  
-
-}
-
-}
-
-}
-
-// =========================================================
-// TIMER STATE UPDATE
-// =========================================================
-
-function updateTimerState() {
-
-if (
-!timer.running ||
-timer.startedAt === null
-) {
-
-return;
-
-}
-
-const now =
-Date.now();
-
-const delta =
-now -
-timer.startedAt;
-
-if (
-timer.mode ===
-"stopwatch"
-) {
-
-timer.elapsedMs +=  
-  delta;  
-
-
-timer.startedAt =  
-  now;
-
-}
-
-else {
-
-timer.countdownRemainingMs -=  
-  delta;  
-
-
-timer.startedAt =  
-  now;  
-
-
-timer.elapsedMs =  
-  timer.countdownDurationMs -  
-  timer.countdownRemainingMs;  
-
-
-if (  
-  timer.countdownRemainingMs <=  
-  0  
-) {  
-
-  timer.countdownRemainingMs =  
-    0;  
-
-
-  timer.elapsedMs =  
-    timer.countdownDurationMs;  
-
-
-  timer.running =  
-    false;  
-
-
-  timer.startedAt =  
-    null;  
-
-
-  saveTimerStudyDelta();  
-
-
-  timer.savedMs =  
-    0;  
-
-
-  updateTimerDisplay();  
-
-
-  showTimerEnded();  
-
-
-  return;  
-
-}
-
-}
-
-saveTimerStudyDelta(
-false
-);
-
-updateTimerDisplay();
-
-}
-
-// =========================================================
-// SAVE TIMER STUDY DELTA
-// =========================================================
-
-function saveTimerStudyDelta(
-resetSaved = false
-) {
-
-const current =
-timer.elapsedMs;
-
-const unsaved =
-Math.max(
-0,
-current -
-timer.savedMs
-);
-
-if (
-unsaved >= 1000
-) {
-
-addStudySeconds(  
-  Math.floor(  
-    unsaved / 1000  
-  )  
-);
-
-}
-
-timer.savedMs =
-resetSaved
-? 0
-: current;
-
-}
-
-// =========================================================
-// TIMER MODE
-// =========================================================
-
-function selectTimerMode(
-mode
-) {
-
-if (timer.running) {
-
-updateTimerState();  
-
-
-timer.running =  
-  false;  
-
-
-timer.startedAt =  
-  null;  
-
-
-saveTimerStudyDelta();
-
-}
-
-timer.mode =
-mode;
-
-timer.elapsedMs =
-0;
-
-timer.savedMs =
-0;
-
-timer.countdownDurationMs =
-0;
-
-timer.countdownRemainingMs =
-0;
-
-timer.lastDisplaySecond =
--1;
-
-$("stopwatchMode")
-?.classList.toggle(
-"active",
-mode === "stopwatch"
-);
-
-$("countdownMode")
-?.classList.toggle(
-"active",
-mode === "countdown"
-);
-
-$("countdownInput")
-?.classList.toggle(
-"hidden",
-mode !== "countdown"
-);
-
-if ($("timerDisplay")) {
-
-$("timerDisplay").textContent =  
-  "00:00:00";
-
-}
-
-}
-
-// =========================================================
-// START TIMER
-// =========================================================
-
-function startStudyTimer() {
-
-if (timer.running) {
-return;
-}
-
-if (
-timer.mode ===
-"countdown"
-) {
-
-if (  
-  timer.countdownRemainingMs <=  
-  0  
-) {  
-
-  const minutes =  
-    Number(  
-      $("countdownMinutes")  
-        ?.value ||  
-      0  
-    );  
-
-
-  if (  
-    !Number.isFinite(minutes) ||  
-    minutes <= 0  
-  ) {  
-
-    alert(  
-      "Enter a countdown time in minutes."  
-    );  
-
-    return;  
-
-  }  
-
-
-  timer.countdownDurationMs =  
-    Math.round(  
-      minutes *  
-      60 *  
-      1000  
-    );  
-
-
-  timer.countdownRemainingMs =  
-    timer.countdownDurationMs;  
-
-
-  timer.elapsedMs =  
-    0;  
-
-
-  timer.savedMs =  
-    0;  
-
-}
-
-}
-
-timer.running =
-true;
-
-timer.startedAt =
-Date.now();
-
-timer.lastDisplaySecond =
--1;
-
-updateTimerDisplay();
-
-}
-
-// =========================================================
-// PAUSE TIMER
-// =========================================================
-
-function pauseStudyTimer() {
-
-if (!timer.running) {
-return;
-}
-
-updateTimerState();
-
-if (timer.running) {
-
-timer.running =  
-  false;  
-
-
-timer.startedAt =  
-  null;
-
-}
-
-saveTimerStudyDelta();
-
-updateTimerDisplay();
-
-updateMainUI();
-
-}
-
-// =========================================================
-// RESET TIMER
-// =========================================================
-
-function resetStudyTimer() {
-
-if (timer.running) {
-
-updateTimerState();
-
-}
-
-saveTimerStudyDelta();
-
-timer.running =
-false;
-
-timer.startedAt =
-null;
-
-timer.elapsedMs =
-0;
-
-timer.savedMs =
-0;
-
-timer.countdownDurationMs =
-0;
-
-timer.countdownRemainingMs =
-0;
-
-timer.lastDisplaySecond =
--1;
-
-if ($("timerDisplay")) {
-
-$("timerDisplay").textContent =  
-  "00:00:00";
-
-}
-
-updateMainUI();
-
-}
-
-// =========================================================
-// MANUAL STUDY TIME
-// =========================================================
-
-function saveManualStudyTime() {
-
-const minutes =
-Number(
-$("manualStudyTime")
-?.value ||
-0
-);
-
-if (
-!Number.isFinite(minutes) ||
-minutes <= 0
-) {
-
-alert(  
-  "Enter a study time greater than 0 minutes."  
-);  
-
-return;
-
-}
-
-addStudySeconds(
-Math.round(
-minutes *
-60
-)
-);
-
-$("manualStudyTime").value =
-"";
-
-}
-
-// =========================================================
-// TIMER ENDED
-// =========================================================
-
-function showTimerEnded() {
-
-$("timerEndedReminder")
-?.classList.remove(
-"hidden"
-);
-
-playAlarm();
-
-sendNotification(
-"Timer Ended",
-"Your countdown timer has reached 00:00."
-);
-
-}
-
-function playAlarm() {
-
-try {
-
-const AudioContextClass =  
-  window.AudioContext ||  
-  window.webkitAudioContext;  
-
-
-if (!AudioContextClass) {  
-  return;  
-}  
-
-
-const context =  
-  new AudioContextClass();  
-
-
-const oscillator =  
-  context.createOscillator();  
-
-
-const gain =  
-  context.createGain();  
-
-
-oscillator.frequency.value =  
-  800;  
-
-
-gain.gain.setValueAtTime(  
-  0.15,  
-  context.currentTime  
-);  
-
-
-gain.gain.exponentialRampToValueAtTime(  
-  0.001,  
-  context.currentTime +  
-  0.8  
-);  
-
-
-oscillator.connect(  
-  gain  
-);  
-
-
-gain.connect(  
-  context.destination  
-);  
-
-
-oscillator.start();  
-
-
-oscillator.stop(  
-  context.currentTime +  
-  0.8  
-);
-
-}
-
-catch (_) {}
-
-}
-
-// =========================================================
-// NOTIFICATIONS
-// =========================================================
-
-async function enableNotifications() {
-
-if (
-!("Notification" in window)
-) {
-
-alert(  
-  "This browser does not support notifications."  
-);  
-
-return;
-
-}
-
-try {
-
-const permission =  
-  await Notification.requestPermission();  
-
-
-if (  
-  permission ===  
-  "granted"  
-) {  
-
-  updateNotificationButton();  
-
-
-  sendNotification(  
-    "Daily Target",  
-    "Notifications are enabled."  
-  );  
-
-}  
-
-
-else if (  
-  permission ===  
-  "denied"  
-) {  
-
-  alert(  
-    "Notifications are blocked for this site. Open Chrome site settings and allow Notifications for this website."  
-  );  
-
-
-  updateNotificationButton();  
-
-}  
-
-
-else {  
-
-  alert(  
-    "Notification permission was not granted."  
-  );  
-
-}
+    container.appendChild(
+      row
+    );
 
-}
-
-catch (error) {
-
-console.error(  
-  error  
-);  
-
-
-alert(  
-  "Notification permission could not be requested in this browser."  
-);
-
-}
-
-}
-
-function updateNotificationButton() {
-
-const button =
-$("notificationBtn");
-
-if (!button) return;
-
-if (
-!("Notification" in window)
-) {
-
-button.textContent =  
-  "Notifications Not Supported";  
-
-return;
-
-}
-
-button.textContent =
-Notification.permission ===
-"granted"
-
-? "✓ Notifications Enabled"  
-
-  : "Enable Notifications";
-
-}
-
-function sendNotification(
-title,
-body
-) {
-
-if (
-!("Notification" in window) ||
-Notification.permission !==
-"granted"
-) {
-
-return;
-
-}
-
-try {
-
-new Notification(  
-  title,  
-  {  
-    body  
-  }  
-);
-
-}
-
-catch (error) {
-
-console.log(  
-  "Notification unavailable",  
-  error  
-);
-
-}
-
-}
-
-// =========================================================
-// SCHEDULED TASK NOTIFICATIONS
-// =========================================================
-
-function notificationKey(
-type,
-id,
-date,
-time
-) {
-
-return ${type}_${id}_${date}_${time};
-
-}
-
-function checkScheduledNotifications() {
-
-const now =
-new Date();
-
-const date =
-todayKey();
-
-const time =
-${String(   now.getHours()   ).padStart(2, "0")}:${String(   now.getMinutes()   ).padStart(2, "0")};
-
-// Regular tasks
-
-const tasks =
-getTasks(date);
-
-tasks.forEach(
-task => {
-
-if (  
-    !task.completed &&  
-    task.time === time  
-  ) {  
-
-    const key =  
-      notificationKey(  
-        "task",  
-        task.id,  
-        date,  
-        time  
-      );  
-
-
-    if (  
-      !data.notified[key]  
-    ) {  
-
-      data.notified[key] =  
-        true;  
-
-
-      save();  
-
-
-      showScheduledReminder(  
-        task.id,  
-        task.name,  
-        task.time  
-      );  
-
-    }  
-
-  }  
-
-}
-
-);
-
-// Fixed targets
-
-data.fixedTargets.forEach(
-target => {
-
-if (  
-    !target.completed &&  
-    target.time === time  
-  ) {  
-
-    const key =  
-      notificationKey(  
-        "fixed",  
-        target.id,  
-        date,  
-        time  
-      );  
-
-
-    if (  
-      !data.notified[key]  
-    ) {  
-
-      data.notified[key] =  
-        true;  
-
-
-      save();  
-
-
-      showScheduledReminder(  
-        target.id,  
-        target.name,  
-        target.time  
-      );  
-
-    }  
-
-  }  
-
-}
-
-);
-
-}
-
-function showScheduledReminder(
-id,
-name,
-time
-) {
-
-if ($("reminderText")) {
-
-$("reminderText").textContent =  
-  `Time to complete the task: ${name} (${formatTime(time)}).`;
-
-}
-
-$("reminder")
-?.classList.remove(
-"hidden"
-);
-
-playAlarm();
-
-sendNotification(
-"Time to complete the task",
-${name} — ${formatTime(time)}
-);
-
-if (reminderTimer) {
-
-clearTimeout(  
-  reminderTimer  
-);
-
-}
-
-reminderTimer =
-null;
-
-$("reminderComplete")
-?.setAttribute(
-"data-reminder-id",
-id
-);
-
-}
-
-// =========================================================
-// REMINDER CONTROLS
-// =========================================================
-
-function stopReminderForTask(
-id
-) {
-
-if (
-$("reminderComplete")
-?.getAttribute(
-"data-reminder-id"
-) === id
-) {
-
-$("reminder")  
-  ?.classList.add(  
-    "hidden"  
-  );  
-
-
-if (reminderTimer) {  
-
-  clearTimeout(  
-    reminderTimer  
-  );  
-
-}  
-
-
-reminderTimer =  
-  null;
-
-}
-
-}
-
-function completeReminderTarget() {
-
-const id =
-$("reminderComplete")
-?.getAttribute(
-"data-reminder-id"
-);
-
-if (!id) return;
-
-const date =
-todayKey();
-
-const task =
-getTasks(date).find(
-item =>
-item.id === id
-);
-
-if (task) {
-
-task.completed =  
-  true;  
-
-
-setTasks(  
-  date,  
-  getTasks(date)  
-);
-
-}
-
-else {
-
-const fixed =  
-  data.fixedTargets.find(  
-    item =>  
-      item.id === id  
-  );  
-
-
-if (fixed) {  
-
-  fixed.completed =  
-    true;  
-
+  }
 
-  fixed.completedDate =  
-    todayKey();  
-
-}
-
-}
-
-updateDayCompletion(
-date
-);
-
-$("reminder")
-?.classList.add(
-"hidden"
-);
-
-updateMainUI();
-
-renderRegularTasks();
-
-renderFixedTargets();
-
-}
-
-function remindLater() {
-
-$("reminder")
-?.classList.add(
-"hidden"
-);
-
-const id =
-$("reminderComplete")
-?.getAttribute(
-"data-reminder-id"
-);
-
-if (!id) return;
-
-if (reminderTimer) {
-
-clearTimeout(  
-  reminderTimer  
-);
-
-}
-
-reminderTimer =
-setTimeout(
-() => {
-
-const task =  
-      getTasks(  
-        todayKey()  
-      ).find(  
-        item =>  
-          item.id === id  
-      );  
-
-
-    const fixed =  
-      data.fixedTargets.find(  
-        item =>  
-          item.id === id  
-      );  
-
-
-    const target =  
-      task ||  
-      fixed;  
-
-
-    if (  
-      target &&  
-      !target.completed  
-    ) {  
-
-      showScheduledReminder(  
-        id,  
-        target.name,  
-        target.time  
-      );  
-
-    }  
-
-  },  
-  60 * 60 * 1000  
-);
-
-}
-
-// =========================================================
-// EVENT BINDING
-// =========================================================
-
-function bindEvents() {
-
-// Regular target
-
-$("openRegularTarget")
-?.addEventListener(
-"click",
-openRegularTasks
-);
-
-$("editDaily")
-?.addEventListener(
-"click",
-openPlanner
-);
-
-$("completeAllRegular")
-?.addEventListener(
-"click",
-completeAllRegular
-);
-
-$("completeAllRegularFromView")
-?.addEventListener(
-"click",
-completeAllRegular
-);
-
-// Interfaces
-
-$("closeRegularTasks")
-?.addEventListener(
-"click",
-closeAllViews
-);
-
-$("closeRegularPlanner")
-?.addEventListener(
-"click",
-closeAllViews
-);
-
-$("closeFixedTargets")
-?.addEventListener(
-"click",
-closeAllViews
-);
-
-$("closeWeeklyStats")
-?.addEventListener(
-"click",
-closeAllViews
-);
-
-// Tasks
-
-$("addTaskBtn")
-?.addEventListener(
-"click",
-() =>
-openTaskModal(
-todayKey()
-)
-);
-
-$("addTaskFromPlanner")
-?.addEventListener(
-"click",
-() =>
-openTaskModal(
-plannerDate
-)
-);
-
-$("saveTaskBtn")
-?.addEventListener(
-"click",
-saveTask
-);
-
-$("closeTaskModal")
-?.addEventListener(
-"click",
-closeTaskModal
-);
-
-$("plannerDate")
-?.addEventListener(
-"change",
-renderPlanner
-);
-
-$("saveRegularPlan")
-?.addEventListener(
-"click",
-() => {
-
-save();  
-
-    updateMainUI();  
-
-    closeAllViews();  
-
-  }  
-);
-
-// Fixed targets
-
-$("openFixedTargets")
-?.addEventListener(
-"click",
-openFixedTargets
-);
-
-$("addFixedTarget")
-?.addEventListener(
-"click",
-() =>
-openTargetModal(
-"fixed"
-)
-);
-
-$("saveTarget")
-?.addEventListener(
-"click",
-saveTarget
-);
-
-$("closeModal")
-?.addEventListener(
-"click",
-closeModal
-);
-
-// Weekly statistics
-
-$("openWeeklyStats")
-?.addEventListener(
-"click",
-openWeeklyStats
-);
-
-// Timer
-
-$("stopwatchMode")
-?.addEventListener(
-"click",
-() =>
-selectTimerMode(
-"stopwatch"
-)
-);
-
-$("countdownMode")
-?.addEventListener(
-"click",
-() =>
-selectTimerMode(
-"countdown"
-)
-);
-
-$("startStudyTimer")
-?.addEventListener(
-"click",
-startStudyTimer
-);
-
-$("pauseStudyTimer")
-?.addEventListener(
-"click",
-pauseStudyTimer
-);
-
-$("resetStudyTimer")
-?.addEventListener(
-"click",
-resetStudyTimer
-);
-
-$("saveManualStudyTime")
-?.addEventListener(
-"click",
-saveManualStudyTime
-);
-
-// Notifications
-
-$("notificationBtn")
-?.addEventListener(
-"click",
-enableNotifications
-);
-
-$("reminderComplete")
-?.addEventListener(
-"click",
-completeReminderTarget
-);
-
-$("remindLater")
-?.addEventListener(
-"click",
-remindLater
-);
-
-$("closeTimerEndedReminder")
-?.addEventListener(
-"click",
-() =>
-$("timerEndedReminder")
-?.classList.add(
-"hidden"
-)
-);
-
-// Page visibility
-
-document.addEventListener(
-"visibilitychange",
-() => {
-
-if (!document.hidden) {  
-
-    updateMainUI();  
-
-    checkScheduledNotifications();  
-
-    updateTimerDisplay();  
-
-  }  
-
-}
-
-);
-
-// Graph resize
-
-window.addEventListener(
-"resize",
-() => {
-
-if (  
-    !$("weeklyStatsView")  
-      ?.classList.contains(  
-        "hidden"  
-      )  
-  ) {  
-
-    renderStudyChart(  
-      getWeekKeys()  
-    );  
-
-  }  
-
-}
-
-);
-
-}
-
-// =========================================================
-// CLEAN OLD NOTIFICATION RECORDS
-// =========================================================
-
-function cleanOldNotificationRecords() {
-
-const cutoff =
-new Date();
-
-cutoff.setDate(
-cutoff.getDate() - 14
-);
-
-for (
-const key
-of Object.keys(
-data.notified
-)
-) {
-
-const parts =  
-  key.split("_");  
-
-
-const date =  
-  parts[parts.length - 2];  
-
-
-if (  
-  /^\d{4}-\d{2}-\d{2}$/  
-    .test(date) &&  
-  dateFromKey(date) <  
-    cutoff  
-) {  
-
-  delete data.notified[key];  
-
-}
-
 }
-
-}
-
-// =========================================================
-// START APPLICATION
-// =========================================================
-
-function init() {
 
-cleanOldNotificationRecords();
-
-updateStreak();
-
-save();
-
-bindEvents();
-
-selectTimerMode(
-"stopwatch"
-);
-
-updateMainUI();
-
-checkScheduledNotifications();
-
-// Timer update
-
-setInterval(
-() => {
-
-updateTimerState();  
-
-},  
-250
-
-);
-
-// Scheduled notifications
-
-notificationCheckTimer =
-setInterval(
-checkScheduledNotifications,
-1000
-);
-
-// Dashboard refresh
-
-setInterval(
-updateMainUI,
-60000
-);
-
-}
 
-document.addEventListener(
-"DOMContentLoaded",
-init
-);
 // =========================================================
 // FULL INTERFACE MANAGEMENT
 // =========================================================
@@ -4179,13 +1333,25 @@ function showView(id) {
     "regularPlanner",
     "fixedTargetsView",
     "weeklyStatsView"
-  ].forEach(viewId => {
-    $(viewId)?.classList.add("hidden");
-  });
+  ].forEach(
+    viewId => {
 
-  $(id)?.classList.remove("hidden");
+      $(viewId)?.classList.add(
+        "hidden"
+      );
 
-  document.body.style.overflow = "hidden";
+    }
+  );
+
+
+  $(id)?.classList.remove(
+    "hidden"
+  );
+
+
+  document.body.style.overflow =
+    "hidden";
+
 }
 
 
@@ -4196,11 +1362,20 @@ function closeAllViews() {
     "regularPlanner",
     "fixedTargetsView",
     "weeklyStatsView"
-  ].forEach(viewId => {
-    $(viewId)?.classList.add("hidden");
-  });
+  ].forEach(
+    viewId => {
 
-  document.body.style.overflow = "";
+      $(viewId)?.classList.add(
+        "hidden"
+      );
+
+    }
+  );
+
+
+  document.body.style.overflow =
+    "";
+
 }
 
 
@@ -4209,44 +1384,85 @@ function closeAllViews() {
 // =========================================================
 
 function openRegularTasks() {
+
   renderRegularTasks();
-  showView("regularTasksView");
+
+  showView(
+    "regularTasksView"
+  );
+
 }
 
 
 function renderRegularTasks() {
 
-  const date = todayKey();
-  const tasks = getTasks(date);
+  const date =
+    todayKey();
+
+
+  const tasks =
+    getTasks(date);
+
 
   if ($("regularTasksDate")) {
+
     $("regularTasksDate").textContent =
       formatDateLong(date);
+
   }
+
 
   if ($("regularTasksCount")) {
+
     $("regularTasksCount").textContent =
-      `${tasks.length} task${tasks.length === 1 ? "" : "s"}`;
+      `${tasks.length} task${
+        tasks.length === 1
+          ? ""
+          : "s"
+      }`;
+
   }
+
 
   const completed =
-    tasks.filter(task => task.completed).length;
+    tasks.filter(
+      task =>
+        task.completed
+    ).length;
+
 
   if ($("regularTasksProgress")) {
+
     $("regularTasksProgress").textContent =
       `${completed} / ${tasks.length}`;
+
   }
+
 
   if ($("regularTasksProgressFill")) {
+
     $("regularTasksProgressFill").style.width =
-      `${tasks.length ? (completed / tasks.length) * 100 : 0}%`;
+      `${
+        tasks.length
+          ? completed / tasks.length * 100
+          : 0
+      }%`;
+
   }
 
-  const list = $("regularTasksList");
 
-  if (!list) return;
+  const list =
+    $("regularTasksList");
 
-  list.innerHTML = "";
+
+  if (!list) {
+    return;
+  }
+
+
+  list.innerHTML =
+    "";
+
 
   if (!tasks.length) {
 
@@ -4258,93 +1474,167 @@ function renderRegularTasks() {
     `;
 
     return;
+
   }
 
-  const sortedTasks = [...tasks].sort(
-    (a, b) =>
-      (a.time || "99:99").localeCompare(
-        b.time || "99:99"
-      )
-  );
 
-  sortedTasks.forEach(task => {
+  const sortedTasks =
+    [...tasks].sort(
+      (a, b) =>
+        (a.time || "99:99")
+          .localeCompare(
+            b.time || "99:99"
+          )
+    );
 
-    const row = document.createElement("div");
 
-    row.className =
-      `task-row${task.completed ? " completed" : ""}`;
+  sortedTasks.forEach(
+    task => {
 
-    row.innerHTML = `
-      <input
-        class="task-checkbox"
-        type="checkbox"
-        ${task.completed ? "checked" : ""}
-        aria-label="Complete task"
-      >
-
-      <div class="task-row-content">
-        <div class="task-row-name">
-          ${escapeHtml(task.name)}
-        </div>
-
-        <div class="task-row-time">
-          ${
-            task.time
-              ? formatTime(task.time)
-              : "No time set"
-          }
-        </div>
-      </div>
-
-      <button
-        class="task-delete-button"
-        type="button"
-        title="Delete task"
-      >
-        ×
-      </button>
-    `;
-
-    row
-      .querySelector(".task-checkbox")
-      .addEventListener("change", event => {
-
-        task.completed =
-          event.target.checked;
-
-        setTasks(date, tasks);
-
-        updateDayCompletion(date);
-
-        renderRegularTasks();
-        updateMainUI();
-
-        if (task.completed) {
-          stopReminderForTask(task.id);
-        }
-      });
-
-    row
-      .querySelector(".task-delete-button")
-      .addEventListener("click", () => {
-
-        if (!confirm(`Delete "${task.name}"?`)) {
-          return;
-        }
-
-        setTasks(
-          date,
-          tasks.filter(item => item.id !== task.id)
+      const row =
+        document.createElement(
+          "div"
         );
 
-        updateDayCompletion(date);
 
-        renderRegularTasks();
-        updateMainUI();
-      });
+      row.className =
+        `task-row${
+          task.completed
+            ? " completed"
+            : ""
+        }`;
 
-    list.appendChild(row);
-  });
+
+      row.innerHTML = `
+        <input
+          class="task-checkbox"
+          type="checkbox"
+          ${
+            task.completed
+              ? "checked"
+              : ""
+          }
+          aria-label="Complete task"
+        >
+
+        <div class="task-row-content">
+
+          <div class="task-row-name">
+            ${escapeHtml(task.name)}
+          </div>
+
+          <div class="task-row-time">
+            ${
+              task.time
+                ? formatTime(task.time)
+                : "No time set"
+            }
+          </div>
+
+        </div>
+
+        <button
+          class="task-delete-button"
+          type="button"
+          title="Delete task"
+        >
+          ×
+        </button>
+      `;
+
+
+      const checkbox =
+        row.querySelector(
+          ".task-checkbox"
+        );
+
+
+      const deleteButton =
+        row.querySelector(
+          ".task-delete-button"
+        );
+
+
+      checkbox?.addEventListener(
+        "change",
+        event => {
+
+          task.completed =
+            event.target.checked;
+
+
+          setTasks(
+            date,
+            tasks
+          );
+
+
+          updateDayCompletion(
+            date
+          );
+
+
+          if (task.completed) {
+
+            stopReminderForTask(
+              task.id
+            );
+
+          }
+
+
+          renderRegularTasks();
+
+          updateMainUI();
+
+        }
+      );
+
+
+      deleteButton?.addEventListener(
+        "click",
+        () => {
+
+          if (
+            !confirm(
+              `Delete "${task.name}"?`
+            )
+          ) {
+
+            return;
+
+          }
+
+
+          setTasks(
+            date,
+            tasks.filter(
+              item =>
+                item.id !== task.id
+            )
+          );
+
+
+          updateDayCompletion(
+            date
+          );
+
+
+          renderRegularTasks();
+
+          updateMainUI();
+
+        }
+      );
+
+
+      list.appendChild(
+        row
+      );
+
+    }
+  );
+
 }
 
 
@@ -4354,15 +1644,25 @@ function renderRegularTasks() {
 
 function openPlanner() {
 
-  plannerDate = todayKey();
+  plannerDate =
+    todayKey();
+
 
   if ($("plannerDate")) {
-    $("plannerDate").value = plannerDate;
+
+    $("plannerDate").value =
+      plannerDate;
+
   }
+
 
   renderPlanner();
 
-  showView("regularPlanner");
+
+  showView(
+    "regularPlanner"
+  );
+
 }
 
 
@@ -4373,15 +1673,27 @@ function renderPlanner() {
     plannerDate ||
     todayKey();
 
-  plannerDate = date;
 
-  const list = $("plannerTasksList");
+  plannerDate =
+    date;
 
-  if (!list) return;
 
-  list.innerHTML = "";
+  const list =
+    $("plannerTasksList");
 
-  const tasks = getTasks(date);
+
+  if (!list) {
+    return;
+  }
+
+
+  list.innerHTML =
+    "";
+
+
+  const tasks =
+    getTasks(date);
+
 
   if (!tasks.length) {
 
@@ -4393,54 +1705,83 @@ function renderPlanner() {
     `;
 
     return;
+
   }
 
-  tasks.forEach(task => {
 
-    const row = document.createElement("div");
+  tasks.forEach(
+    task => {
 
-    row.className = "task-row";
-
-    row.innerHTML = `
-      <div class="task-row-content">
-        <div class="task-row-name">
-          ${escapeHtml(task.name)}
-        </div>
-
-        <div class="task-row-time">
-          ${
-            task.time
-              ? formatTime(task.time)
-              : "No time set"
-          }
-        </div>
-      </div>
-
-      <button
-        class="task-delete-button"
-        type="button"
-      >
-        ×
-      </button>
-    `;
-
-    row
-      .querySelector("button")
-      .addEventListener("click", () => {
-
-        setTasks(
-          date,
-          tasks.filter(item => item.id !== task.id)
+      const row =
+        document.createElement(
+          "div"
         );
 
-        save();
 
-        renderPlanner();
-        updateMainUI();
-      });
+      row.className =
+        "task-row";
 
-    list.appendChild(row);
-  });
+
+      row.innerHTML = `
+        <div class="task-row-content">
+
+          <div class="task-row-name">
+            ${escapeHtml(task.name)}
+          </div>
+
+          <div class="task-row-time">
+            ${
+              task.time
+                ? formatTime(task.time)
+                : "No time set"
+            }
+          </div>
+
+        </div>
+
+        <button
+          class="task-delete-button"
+          type="button"
+        >
+          ×
+        </button>
+      `;
+
+
+      row
+        .querySelector(
+          ".task-delete-button"
+        )
+        ?.addEventListener(
+          "click",
+          () => {
+
+            setTasks(
+              date,
+              tasks.filter(
+                item =>
+                  item.id !== task.id
+              )
+            );
+
+
+            save();
+
+            renderPlanner();
+
+            updateMainUI();
+
+          }
+        );
+
+
+      list.appendChild(
+        row
+      );
+
+    }
+  );
+
 }
 
 
@@ -4448,82 +1789,153 @@ function renderPlanner() {
 // ADD TASK MODAL
 // =========================================================
 
-function openTaskModal(date = todayKey()) {
+function openTaskModal(
+  date = todayKey()
+) {
 
   if ($("taskNameInput")) {
-    $("taskNameInput").value = "";
+
+    $("taskNameInput").value =
+      "";
+
   }
+
 
   if ($("taskDateInput")) {
-    $("taskDateInput").value = date;
+
+    $("taskDateInput").value =
+      date;
+
   }
+
 
   if ($("taskTimeInput")) {
-    $("taskTimeInput").value = "";
+
+    $("taskTimeInput").value =
+      "";
+
   }
 
-  $("taskModal")?.classList.remove("hidden");
+
+  $("taskModal")?.classList.remove(
+    "hidden"
+  );
+
 
   setTimeout(
-    () => $("taskNameInput")?.focus(),
+    () =>
+      $("taskNameInput")?.focus(),
     50
   );
+
 }
 
 
 function closeTaskModal() {
-  $("taskModal")?.classList.add("hidden");
+
+  $("taskModal")?.classList.add(
+    "hidden"
+  );
+
 }
 
 
 function saveTask() {
 
   const name =
-    $("taskNameInput")?.value.trim();
+    $("taskNameInput")
+      ?.value
+      .trim();
+
 
   const date =
-    $("taskDateInput")?.value ||
+    $("taskDateInput")
+      ?.value ||
     todayKey();
 
+
   const time =
-    $("taskTimeInput")?.value ||
+    $("taskTimeInput")
+      ?.value ||
     "";
 
+
   if (!name) {
-    alert("Please enter a task name.");
+
+    alert(
+      "Please enter a task name."
+    );
+
     return;
+
   }
+
 
   if (!date) {
-    alert("Please select a date.");
+
+    alert(
+      "Please select a date."
+    );
+
     return;
+
   }
 
-  const tasks = getTasks(date);
+
+  const tasks =
+    getTasks(date);
+
 
   tasks.push({
-    id: makeId("task"),
+
+    id:
+      makeId("task"),
+
     name,
+
     date,
+
     time,
-    completed: false
+
+    completed:
+      false
+
   });
 
-  setTasks(date, tasks);
+
+  setTasks(
+    date,
+    tasks
+  );
+
 
   save();
 
+
   closeTaskModal();
 
+
+  updateDayCompletion(
+    date
+  );
+
+
   updateMainUI();
+
   renderPlanner();
+
 
   if (
     !$("regularTasksView")
-      ?.classList.contains("hidden")
+      ?.classList.contains(
+        "hidden"
+      )
   ) {
+
     renderRegularTasks();
+
   }
+
 }
 
 
@@ -4533,29 +1945,50 @@ function saveTask() {
 
 function completeAllRegular() {
 
-  const date = todayKey();
+  const date =
+    todayKey();
 
-  const tasks = getTasks(date);
+
+  const tasks =
+    getTasks(date);
+
 
   if (!tasks.length) {
+
     alert(
       "There are no regular tasks to complete."
     );
+
     return;
+
   }
+
 
   tasks.forEach(
     task => {
-      task.completed = true;
+
+      task.completed =
+        true;
+
     }
   );
 
-  setTasks(date, tasks);
 
-  updateDayCompletion(date);
+  setTasks(
+    date,
+    tasks
+  );
+
+
+  updateDayCompletion(
+    date
+  );
+
 
   renderRegularTasks();
+
   updateMainUI();
+
 }
 
 
@@ -4567,26 +2000,40 @@ function openFixedTargets() {
 
   renderFixedTargets();
 
-  showView("fixedTargetsView");
+
+  showView(
+    "fixedTargetsView"
+  );
+
 }
 
 
 function renderFixedTargets() {
 
-  const list = $("fixedTargetsList");
+  const list =
+    $("fixedTargetsList");
 
-  if (!list) return;
 
-  list.innerHTML = "";
+  if (!list) {
+    return;
+  }
+
+
+  list.innerHTML =
+    "";
+
 
   if ($("fixedTargetsCount")) {
+
     $("fixedTargetsCount").textContent =
       `${data.fixedTargets.length} target${
         data.fixedTargets.length === 1
           ? ""
           : "s"
       }`;
+
   }
+
 
   if (!data.fixedTargets.length) {
 
@@ -4598,108 +2045,172 @@ function renderFixedTargets() {
     `;
 
     return;
+
   }
 
-  data.fixedTargets.forEach(target => {
 
-    const row = document.createElement("div");
+  data.fixedTargets.forEach(
+    target => {
 
-    row.className = "fixed-target-row";
+      const row =
+        document.createElement(
+          "div"
+        );
 
-    row.innerHTML = `
-      <div class="fixed-target-main">
 
-        <input
-          class="task-checkbox"
-          type="checkbox"
-          ${target.completed ? "checked" : ""}
-          aria-label="Complete fixed target"
-        >
+      row.className =
+        "fixed-target-row";
 
-        <div class="fixed-target-info">
 
-          <div class="fixed-target-name">
-            ${escapeHtml(target.name)}
-          </div>
+      row.innerHTML = `
+        <div class="fixed-target-main">
 
-          <div class="fixed-target-time">
+          <input
+            class="task-checkbox"
+            type="checkbox"
             ${
-              target.time
-                ? formatTime(target.time)
-                : "No time set"
+              target.completed
+                ? "checked"
+                : ""
             }
+            aria-label="Complete fixed target"
+          >
+
+          <div class="fixed-target-info">
+
+            <div class="fixed-target-name">
+              ${escapeHtml(target.name)}
+            </div>
+
+            <div class="fixed-target-time">
+              ${
+                target.time
+                  ? formatTime(target.time)
+                  : "No time set"
+              }
+            </div>
+
           </div>
 
         </div>
 
-      </div>
+        <div class="fixed-target-actions">
 
-      <div class="fixed-target-actions">
+          <button
+            class="outline-button edit-fixed"
+            type="button"
+          >
+            Edit
+          </button>
 
-        <button
-          class="outline-button edit-fixed"
-          type="button"
-        >
-          Edit
-        </button>
+          <button
+            class="secondary-button delete-fixed"
+            type="button"
+          >
+            Delete
+          </button>
 
-        <button
-          class="secondary-button delete-fixed"
-          type="button"
-        >
-          Delete
-        </button>
+        </div>
+      `;
 
-      </div>
-    `;
 
-    row
-      .querySelector(".task-checkbox")
-      .addEventListener("change", event => {
+      row
+        .querySelector(
+          ".task-checkbox"
+        )
+        ?.addEventListener(
+          "change",
+          event => {
 
-        target.completed =
-          event.target.checked;
+            target.completed =
+              event.target.checked;
 
-        target.completedDate =
-          event.target.checked
-            ? todayKey()
-            : "";
 
-        save();
+            target.completedDate =
+              event.target.checked
+                ? todayKey()
+                : "";
 
-        updateDayCompletion(todayKey());
 
-        renderFixedTargets();
-        updateMainUI();
-      });
+            save();
 
-    row
-      .querySelector(".edit-fixed")
-      .addEventListener("click", () => {
-        openTargetModal("fixed", target.id);
-      });
 
-    row
-      .querySelector(".delete-fixed")
-      .addEventListener("click", () => {
+            updateDayCompletion(
+              todayKey()
+            );
 
-        if (!confirm(`Delete "${target.name}"?`)) {
-          return;
-        }
 
-        data.fixedTargets =
-          data.fixedTargets.filter(
-            item => item.id !== target.id
-          );
+            renderFixedTargets();
 
-        save();
+            updateMainUI();
 
-        renderFixedTargets();
-        updateMainUI();
-      });
+          }
+        );
 
-    list.appendChild(row);
-  });
+
+      row
+        .querySelector(
+          ".edit-fixed"
+        )
+        ?.addEventListener(
+          "click",
+          () =>
+            openTargetModal(
+              "fixed",
+              target.id
+            )
+        );
+
+
+      row
+        .querySelector(
+          ".delete-fixed"
+        )
+        ?.addEventListener(
+          "click",
+          () => {
+
+            if (
+              !confirm(
+                `Delete "${target.name}"?`
+              )
+            ) {
+
+              return;
+
+            }
+
+
+            data.fixedTargets =
+              data.fixedTargets.filter(
+                item =>
+                  item.id !== target.id
+              );
+
+
+            save();
+
+
+            updateDayCompletion(
+              todayKey()
+            );
+
+
+            renderFixedTargets();
+
+            updateMainUI();
+
+          }
+        );
+
+
+      list.appendChild(
+        row
+      );
+
+    }
+  );
+
 }
 
 
@@ -4707,107 +2218,190 @@ function renderFixedTargets() {
 // FIXED TARGET MODAL
 // =========================================================
 
-let editingFixedId = null;
+let editingFixedId =
+  null;
 
 
-function openTargetModal(type, id = null) {
+function openTargetModal(
+  type,
+  id = null
+) {
 
   editingFixedId =
     type === "fixed"
       ? id
       : null;
 
+
   const target =
     id
       ? data.fixedTargets.find(
-          item => item.id === id
+          item =>
+            item.id === id
         )
       : null;
 
+
   if ($("modalTitle")) {
+
     $("modalTitle").textContent =
       type === "fixed"
-        ? target
-          ? "Edit Fixed Target"
-          : "Add Fixed Target"
+        ? (
+            target
+              ? "Edit Fixed Target"
+              : "Add Fixed Target"
+          )
         : "Target";
+
   }
+
 
   if ($("targetInput")) {
+
     $("targetInput").value =
       target?.name || "";
+
   }
+
 
   if ($("timeInput")) {
+
     $("timeInput").value =
       target?.time || "";
+
   }
 
-  $("modal")?.classList.remove("hidden");
+
+  $("modal")?.classList.remove(
+    "hidden"
+  );
+
 
   setTimeout(
-    () => $("targetInput")?.focus(),
+    () =>
+      $("targetInput")?.focus(),
     50
   );
+
 }
 
 
 function closeModal() {
 
-  $("modal")?.classList.add("hidden");
+  $("modal")?.classList.add(
+    "hidden"
+  );
 
-  editingFixedId = null;
+
+  editingFixedId =
+    null;
+
 }
 
 
 function saveTarget() {
 
   const name =
-    $("targetInput")?.value.trim();
+    $("targetInput")
+      ?.value
+      .trim();
+
 
   const time =
-    $("timeInput")?.value || "";
+    $("timeInput")
+      ?.value ||
+    "";
+
 
   if (!name) {
-    alert("Please enter a target name.");
+
+    alert(
+      "Please enter a target name."
+    );
+
     return;
+
   }
 
+
   if (!time) {
-    alert("Please select a time.");
+
+    alert(
+      "Please select a time."
+    );
+
     return;
+
   }
+
 
   if (editingFixedId) {
 
     const target =
       data.fixedTargets.find(
-        item => item.id === editingFixedId
+        item =>
+          item.id ===
+          editingFixedId
       );
 
+
     if (target) {
-      target.name = name;
-      target.time = time;
+
+      target.name =
+        name;
+
+      target.time =
+        time;
+
     }
 
   } else {
 
     data.fixedTargets.push({
-      id: makeId("fixed"),
+
+      id:
+        makeId("fixed"),
+
       name,
+
       time,
-      completed: false,
-      completedDate: todayKey()
+
+      completed:
+        false,
+
+      completedDate:
+        todayKey()
+
     });
+
   }
+
 
   save();
 
+
   closeModal();
 
+
+  updateDayCompletion(
+    todayKey()
+  );
+
+
   renderFixedTargets();
+
   updateMainUI();
+
 }
+
+
+// =========================================================
+// END OF PART 2
+// =========================================================
+// =========================================================
+// DAILY TARGET — FINAL JAVASCRIPT
+// PART 3 OF 3 — FINAL
+// =========================================================
 
 
 // =========================================================
@@ -4818,86 +2412,130 @@ function openWeeklyStats() {
 
   renderWeeklyStats();
 
-  showView("weeklyStatsView");
+  showView(
+    "weeklyStatsView"
+  );
+
 }
 
 
 function getWeekKeys() {
 
-  const today = new Date();
+  const today =
+    new Date();
 
-  const day = today.getDay();
+  const day =
+    today.getDay();
 
   const mondayOffset =
     day === 0
       ? -6
       : 1 - day;
 
-  const monday = new Date(today);
+  const monday =
+    new Date(today);
 
   monday.setDate(
-    today.getDate() + mondayOffset
+    today.getDate() +
+    mondayOffset
   );
 
-  monday.setHours(0, 0, 0, 0);
+  monday.setHours(
+    0,
+    0,
+    0,
+    0
+  );
+
 
   return Array.from(
     { length: 7 },
     (_, index) => {
 
-      const date = new Date(monday);
+      const date =
+        new Date(monday);
 
       date.setDate(
-        monday.getDate() + index
+        monday.getDate() +
+        index
       );
+
 
       return `${date.getFullYear()}-${String(
         date.getMonth() + 1
       ).padStart(2, "0")}-${String(
         date.getDate()
       ).padStart(2, "0")}`;
+
     }
   );
+
 }
 
 
 function renderWeeklyStats() {
 
-  const keys = getWeekKeys();
+  const keys =
+    getWeekKeys();
+
 
   if ($("weeklyStatsDateRange")) {
 
     $("weeklyStatsDateRange").textContent =
       `${formatDateShort(keys[0])} – ${formatDateShort(keys[6])}`;
+
   }
 
+
   renderStudyChart(keys);
+
   renderStudyHistory(keys);
+
   renderTaskHistory(keys);
+
 }
+
+
 // =========================================================
 // WEEKLY STUDY HISTORY
 // =========================================================
 
-function renderStudyHistory(keys) {
+function renderStudyHistory(
+  keys
+) {
 
-  const container = $("weeklyStudyHistory");
+  const container =
+    $("weeklyStudyHistory");
 
-  if (!container) return;
 
-  container.innerHTML = "";
+  if (!container) {
+    return;
+  }
 
-  const now = new Date();
 
-  const actual = keys.filter(key => {
+  container.innerHTML =
+    "";
 
-    const date = dateFromKey(key);
 
-    return (
-      date <= now &&
-      getStudySeconds(key) > 0
+  const now =
+    new Date();
+
+
+  const actual =
+    keys.filter(
+      key => {
+
+        const date =
+          dateFromKey(key);
+
+        return (
+          date <= now &&
+          getStudySeconds(key) > 0
+        );
+
+      }
     );
-  });
+
 
   if (!actual.length) {
 
@@ -4911,72 +2549,128 @@ function renderStudyHistory(keys) {
       </div>
     `;
 
-    if ($("highestStudyTime"))
-      $("highestStudyTime").textContent = "—";
 
-    if ($("highestStudyDay"))
-      $("highestStudyDay").textContent = "—";
+    if ($("highestStudyTime")) {
+      $("highestStudyTime").textContent =
+        "—";
+    }
 
-    if ($("lowestStudyTime"))
-      $("lowestStudyTime").textContent = "—";
+    if ($("highestStudyDay")) {
+      $("highestStudyDay").textContent =
+        "—";
+    }
 
-    if ($("lowestStudyDay"))
-      $("lowestStudyDay").textContent = "—";
+    if ($("lowestStudyTime")) {
+      $("lowestStudyTime").textContent =
+        "—";
+    }
+
+    if ($("lowestStudyDay")) {
+      $("lowestStudyDay").textContent =
+        "—";
+    }
 
     return;
   }
 
-  actual.forEach(key => {
 
-    const date = dateFromKey(key);
+  actual.forEach(
+    key => {
 
-    const row = document.createElement("div");
+      const date =
+        dateFromKey(key);
 
-    row.className = "weekly-history-row";
 
-    row.innerHTML = `
-      <span class="weekly-history-date">
-        ${escapeHtml(
-          date.toLocaleDateString("en-IN", {
-            weekday: "long",
-            day: "numeric",
-            month: "short"
-          })
-        )}
-      </span>
+      const row =
+        document.createElement(
+          "div"
+        );
 
-      <span class="weekly-history-value">
-        ${formatMinutes(getStudySeconds(key))}
-      </span>
-    `;
 
-    container.appendChild(row);
-  });
+      row.className =
+        "weekly-history-row";
 
-  const sorted = [...actual].sort(
-    (a, b) =>
-      getStudySeconds(b) -
-      getStudySeconds(a)
+
+      row.innerHTML = `
+        <span class="weekly-history-date">
+          ${escapeHtml(
+            date.toLocaleDateString(
+              "en-IN",
+              {
+                weekday: "long",
+                day: "numeric",
+                month: "short"
+              }
+            )
+          )}
+        </span>
+
+        <span class="weekly-history-value">
+          ${formatMinutes(
+            getStudySeconds(key)
+          )}
+        </span>
+      `;
+
+
+      container.appendChild(
+        row
+      );
+
+    }
   );
 
-  const highest = sorted[0];
-  const lowest = sorted[sorted.length - 1];
 
-  if ($("highestStudyTime"))
+  const sorted =
+    [...actual].sort(
+      (a, b) =>
+        getStudySeconds(b) -
+        getStudySeconds(a)
+    );
+
+
+  const highest =
+    sorted[0];
+
+  const lowest =
+    sorted[sorted.length - 1];
+
+
+  if ($("highestStudyTime")) {
+
     $("highestStudyTime").textContent =
-      formatMinutes(getStudySeconds(highest));
+      formatMinutes(
+        getStudySeconds(highest)
+      );
 
-  if ($("highestStudyDay"))
+  }
+
+
+  if ($("highestStudyDay")) {
+
     $("highestStudyDay").textContent =
       dateLabel(highest);
 
-  if ($("lowestStudyTime"))
-    $("lowestStudyTime").textContent =
-      formatMinutes(getStudySeconds(lowest));
+  }
 
-  if ($("lowestStudyDay"))
+
+  if ($("lowestStudyTime")) {
+
+    $("lowestStudyTime").textContent =
+      formatMinutes(
+        getStudySeconds(lowest)
+      );
+
+  }
+
+
+  if ($("lowestStudyDay")) {
+
     $("lowestStudyDay").textContent =
       dateLabel(lowest);
+
+  }
+
 }
 
 
@@ -4984,61 +2678,93 @@ function renderStudyHistory(keys) {
 // WEEKLY TASK HISTORY
 // =========================================================
 
-function renderTaskHistory(keys) {
+function renderTaskHistory(
+  keys
+) {
 
-  const container = $("weeklyTaskHistory");
+  const container =
+    $("weeklyTaskHistory");
 
-  if (!container) return;
 
-  container.innerHTML = "";
+  if (!container) {
+    return;
+  }
 
-  keys.forEach(key => {
 
-    const date = dateFromKey(key);
+  container.innerHTML =
+    "";
 
-    const tasks = getTasks(key);
 
-    let value = "No tasks planned";
+  keys.forEach(
+    key => {
 
-    if (tasks.length) {
+      const date =
+        dateFromKey(key);
 
-      const completed =
-        tasks.filter(
-          task => task.completed
-        ).length;
 
-      value =
-        tasks.every(
-          task => task.completed
-        )
-          ? "All tasks completed"
-          : `${completed}/${tasks.length} completed · Incomplete`;
+      const tasks =
+        getTasks(key);
+
+
+      let value =
+        "No tasks planned";
+
+
+      if (tasks.length) {
+
+        const completed =
+          tasks.filter(
+            task =>
+              task.completed
+          ).length;
+
+
+        value =
+          completed === tasks.length
+            ? "All tasks completed"
+            : `${completed}/${tasks.length} completed · Incomplete`;
+
+      }
+
+
+      const row =
+        document.createElement(
+          "div"
+        );
+
+
+      row.className =
+        "weekly-history-row";
+
+
+      row.innerHTML = `
+        <span class="weekly-history-date">
+          ${escapeHtml(
+            date.toLocaleDateString(
+              "en-IN",
+              {
+                weekday: "long",
+                day: "numeric",
+                month: "short",
+                year: "numeric"
+              }
+            )
+          )}
+        </span>
+
+        <span class="weekly-history-value">
+          ${escapeHtml(value)}
+        </span>
+      `;
+
+
+      container.appendChild(
+        row
+      );
+
     }
+  );
 
-    const row = document.createElement("div");
-
-    row.className =
-      "weekly-history-row";
-
-    row.innerHTML = `
-      <span class="weekly-history-date">
-        ${escapeHtml(
-          date.toLocaleDateString("en-IN", {
-            weekday: "long",
-            day: "numeric",
-            month: "short",
-            year: "numeric"
-          })
-        )}
-      </span>
-
-      <span class="weekly-history-value">
-        ${escapeHtml(value)}
-      </span>
-    `;
-
-    container.appendChild(row);
-  });
 }
 
 
@@ -5046,31 +2772,51 @@ function renderTaskHistory(keys) {
 // STUDY GRAPH
 // =========================================================
 
-function renderStudyChart(keys) {
+function renderStudyChart(
+  keys
+) {
 
-  const canvas = $("studyChart");
+  const canvas =
+    $("studyChart");
 
-  const empty = $("studyChartEmpty");
 
-  if (!canvas) return;
+  const empty =
+    $("studyChartEmpty");
 
-  const now = new Date();
 
-  const values = keys.map(key => {
+  if (!canvas) {
+    return;
+  }
 
-    const date = dateFromKey(key);
 
-    if (date > now) {
-      return null;
-    }
+  const now =
+    new Date();
 
-    const seconds =
-      getStudySeconds(key);
 
-    return seconds > 0
-      ? seconds / 60
-      : null;
-  });
+  const values =
+    keys.map(
+      key => {
+
+        const date =
+          dateFromKey(key);
+
+
+        if (date > now) {
+          return null;
+        }
+
+
+        const seconds =
+          getStudySeconds(key);
+
+
+        return seconds > 0
+          ? seconds / 60
+          : null;
+
+      }
+    );
+
 
   const hasData =
     values.some(
@@ -5079,29 +2825,44 @@ function renderStudyChart(keys) {
         value > 0
     );
 
+
   empty?.classList.toggle(
     "hidden",
     hasData
   );
 
-  canvas.style.display =
-    hasData ? "block" : "none";
 
-  if (!hasData) return;
+  canvas.style.display =
+    hasData
+      ? "block"
+      : "none";
+
+
+  if (!hasData) {
+    return;
+  }
+
 
   const rect =
     canvas.getBoundingClientRect();
 
+
   const width =
     Math.max(
       300,
-      Math.floor(rect.width || 700)
+      Math.floor(
+        rect.width || 700
+      )
     );
 
-  const height = 320;
+
+  const height =
+    320;
+
 
   const ratio =
     window.devicePixelRatio || 1;
+
 
   canvas.width =
     width * ratio;
@@ -5109,10 +2870,15 @@ function renderStudyChart(keys) {
   canvas.height =
     height * ratio;
 
+
   const context =
     canvas.getContext("2d");
 
-  if (!context) return;
+
+  if (!context) {
+    return;
+  }
+
 
   context.setTransform(
     ratio,
@@ -5123,12 +2889,14 @@ function renderStudyChart(keys) {
     0
   );
 
+
   context.clearRect(
     0,
     0,
     width,
     height
   );
+
 
   const padding = {
     left: 52,
@@ -5137,15 +2905,18 @@ function renderStudyChart(keys) {
     bottom: 50
   };
 
+
   const plotWidth =
     width -
     padding.left -
     padding.right;
 
+
   const plotHeight =
     height -
     padding.top -
     padding.bottom;
+
 
   const numericValues =
     values.filter(
@@ -5154,33 +2925,52 @@ function renderStudyChart(keys) {
         value > 0
     );
 
+
   const maximum =
     Math.max(
       1,
       Math.ceil(
-        Math.max(...numericValues) * 1.2
+        Math.max(
+          ...numericValues
+        ) * 1.2
       )
     );
+
 
   context.font =
     "12px system-ui, sans-serif";
 
-  context.textAlign = "right";
+  context.textAlign =
+    "right";
 
-  context.textBaseline = "middle";
+  context.textBaseline =
+    "middle";
 
-  context.strokeStyle = "#e2e5e8";
+  context.strokeStyle =
+    "#e2e5e8";
 
-  context.fillStyle = "#70757b";
+  context.fillStyle =
+    "#70757b";
 
-  context.lineWidth = 1;
+  context.lineWidth =
+    1;
 
-  for (let i = 0; i <= 4; i++) {
+
+  // Horizontal grid
+
+  for (
+    let i = 0;
+    i <= 4;
+    i++
+  ) {
 
     const y =
       padding.top +
       plotHeight -
-      plotHeight * i / 4;
+      plotHeight *
+        i /
+        4;
+
 
     context.beginPath();
 
@@ -5190,38 +2980,53 @@ function renderStudyChart(keys) {
     );
 
     context.lineTo(
-      width - padding.right,
+      width -
+        padding.right,
       y
     );
 
     context.stroke();
 
+
     const label =
       Math.round(
-        maximum * i / 4
+        maximum *
+        i /
+        4
       );
+
 
     context.fillText(
       `${label}`,
       padding.left - 9,
       y
     );
+
   }
+
+
+  // Y-axis label
 
   context.save();
 
   context.translate(
     15,
-    padding.top + plotHeight / 2
+    padding.top +
+      plotHeight / 2
   );
 
-  context.rotate(-Math.PI / 2);
+  context.rotate(
+    -Math.PI / 2
+  );
 
-  context.textAlign = "center";
+  context.textAlign =
+    "center";
 
-  context.textBaseline = "middle";
+  context.textBaseline =
+    "middle";
 
-  context.fillStyle = "#70757b";
+  context.fillStyle =
+    "#70757b";
 
   context.fillText(
     "Minutes",
@@ -5231,156 +3036,205 @@ function renderStudyChart(keys) {
 
   context.restore();
 
-  context.textAlign = "center";
 
-  context.textBaseline = "top";
+  // X-axis labels
 
-  keys.forEach((key, index) => {
+  context.textAlign =
+    "center";
 
-    const x =
-      padding.left +
-      (
-        keys.length === 1
-          ? plotWidth / 2
-          : plotWidth *
-            index /
-            (keys.length - 1)
+  context.textBaseline =
+    "top";
+
+
+  keys.forEach(
+    (key, index) => {
+
+      const x =
+        padding.left +
+        (
+          keys.length === 1
+            ? plotWidth / 2
+            : plotWidth *
+              index /
+              (keys.length - 1)
+        );
+
+
+      const date =
+        dateFromKey(key);
+
+
+      context.fillStyle =
+        "#70757b";
+
+
+      context.fillText(
+        date.toLocaleDateString(
+          "en-IN",
+          {
+            weekday: "short",
+            day: "numeric"
+          }
+        ),
+        x,
+        height -
+          padding.bottom +
+          13
       );
 
-    const date =
-      dateFromKey(key);
-
-    context.fillStyle =
-      "#70757b";
-
-    context.fillText(
-      date.toLocaleDateString(
-        "en-IN",
-        {
-          weekday: "short",
-          day: "numeric"
-        }
-      ),
-      x,
-      height -
-        padding.bottom +
-        13
-    );
-  });
-
-  context.strokeStyle = "#15803d";
-
-  context.lineWidth = 3;
-
-  let segmentOpen = false;
-
-  values.forEach((value, index) => {
-
-    if (
-      value === null ||
-      value <= 0
-    ) {
-
-      segmentOpen = false;
-
-      return;
     }
+  );
 
-    const x =
-      padding.left +
-      (
-        keys.length === 1
-          ? plotWidth / 2
-          : plotWidth *
-            index /
-            (keys.length - 1)
-      );
 
-    const y =
-      padding.top +
-      plotHeight -
-      (
-        value /
-        maximum
-      ) *
-      plotHeight;
+  // Study line
 
-    if (!segmentOpen) {
+  context.strokeStyle =
+    "#15803d";
+
+  context.lineWidth =
+    3;
+
+
+  let segmentOpen =
+    false;
+
+
+  values.forEach(
+    (value, index) => {
+
+      if (
+        value === null ||
+        value <= 0
+      ) {
+
+        segmentOpen =
+          false;
+
+        return;
+
+      }
+
+
+      const x =
+        padding.left +
+        (
+          keys.length === 1
+            ? plotWidth / 2
+            : plotWidth *
+              index /
+              (keys.length - 1)
+        );
+
+
+      const y =
+        padding.top +
+        plotHeight -
+        (
+          value /
+          maximum
+        ) *
+        plotHeight;
+
+
+      if (!segmentOpen) {
+
+        context.beginPath();
+
+        context.moveTo(
+          x,
+          y
+        );
+
+        segmentOpen =
+          true;
+
+      } else {
+
+        context.lineTo(
+          x,
+          y
+        );
+
+      }
+
+
+      context.stroke();
+
+    }
+  );
+
+
+  // Points
+
+  values.forEach(
+    (value, index) => {
+
+      if (
+        value === null ||
+        value <= 0
+      ) {
+        return;
+      }
+
+
+      const x =
+        padding.left +
+        (
+          keys.length === 1
+            ? plotWidth / 2
+            : plotWidth *
+              index /
+              (keys.length - 1)
+        );
+
+
+      const y =
+        padding.top +
+        plotHeight -
+        (
+          value /
+          maximum
+        ) *
+        plotHeight;
+
 
       context.beginPath();
 
-      context.moveTo(x, y);
-
-      segmentOpen = true;
-
-    } else {
-
-      context.lineTo(x, y);
-    }
-
-    context.stroke();
-  });
-
-  values.forEach((value, index) => {
-
-    if (
-      value === null ||
-      value <= 0
-    ) {
-      return;
-    }
-
-    const x =
-      padding.left +
-      (
-        keys.length === 1
-          ? plotWidth / 2
-          : plotWidth *
-            index /
-            (keys.length - 1)
+      context.arc(
+        x,
+        y,
+        5,
+        0,
+        Math.PI * 2
       );
 
-    const y =
-      padding.top +
-      plotHeight -
-      (
-        value /
-        maximum
-      ) *
-      plotHeight;
+      context.fillStyle =
+        "#15803d";
 
-    context.beginPath();
+      context.fill();
 
-    context.arc(
-      x,
-      y,
-      5,
-      0,
-      Math.PI * 2
-    );
 
-    context.fillStyle =
-      "#15803d";
+      context.beginPath();
 
-    context.fill();
+      context.arc(
+        x,
+        y,
+        8,
+        0,
+        Math.PI * 2
+      );
 
-    context.beginPath();
+      context.strokeStyle =
+        "#15803d";
 
-    context.arc(
-      x,
-      y,
-      8,
-      0,
-      Math.PI * 2
-    );
+      context.lineWidth =
+        1;
 
-    context.strokeStyle =
-      "#15803d";
+      context.stroke();
 
-    context.lineWidth = 1;
+    }
+  );
 
-    context.stroke();
-  });
 }
 
 
@@ -5388,25 +3242,38 @@ function renderStudyChart(keys) {
 // STUDY TIME STORAGE
 // =========================================================
 
-function addStudySeconds(seconds) {
+function addStudySeconds(
+  seconds
+) {
 
   seconds =
     Math.max(
       0,
-      Math.round(seconds)
+      Math.round(
+        Number(seconds) || 0
+      )
     );
 
-  if (!seconds) return;
 
-  const date = todayKey();
+  if (!seconds) {
+    return;
+  }
+
+
+  const date =
+    todayKey();
+
 
   data.studyByDate[date] =
     getStudySeconds(date) +
     seconds;
 
+
   save();
 
+
   updateMainUI();
+
 }
 
 
@@ -5414,47 +3281,69 @@ function addStudySeconds(seconds) {
 // TIMER DISPLAY
 // =========================================================
 
-function updateTimerDisplay() {
-
-  let displayMs =
-    timer.elapsedMs;
-
-  if (timer.mode === "countdown") {
-
-    displayMs =
-      timer.countdownRemainingMs;
-  }
+function getCurrentTimerElapsedMs() {
 
   if (
-    timer.running &&
-    timer.startedAt !== null
+    timer.mode ===
+    "stopwatch"
   ) {
 
-    const delta =
-      Date.now() -
-      timer.startedAt;
+    if (
+      !timer.running ||
+      timer.startedAt === null
+    ) {
 
-    if (timer.mode === "countdown") {
+      return timer.elapsedMs;
 
-      displayMs =
-        Math.max(
-          0,
-          timer.countdownRemainingMs -
-          delta
-        );
-
-    } else {
-
-      displayMs =
-        timer.elapsedMs +
-        delta;
     }
+
+
+    return (
+      timer.elapsedMs +
+      (
+        Date.now() -
+        timer.startedAt
+      )
+    );
+
   }
+
+
+  // Countdown
+
+  if (
+    !timer.running ||
+    timer.startedAt === null
+  ) {
+
+    return timer.countdownRemainingMs;
+
+  }
+
+
+  return Math.max(
+    0,
+    timer.countdownRemainingMs -
+    (
+      Date.now() -
+      timer.startedAt
+    )
+  );
+
+}
+
+
+function updateTimerDisplay() {
+
+  const displayMs =
+    getCurrentTimerElapsedMs();
+
 
   const second =
     Math.floor(
       displayMs / 1000
     );
+
 
   if (
     second !==
@@ -5464,17 +3353,23 @@ function updateTimerDisplay() {
     timer.lastDisplaySecond =
       second;
 
+
     if ($("timerDisplay")) {
 
       $("timerDisplay").textContent =
-        formatClock(displayMs);
+        formatClock(
+          displayMs
+        );
+
     }
+
   }
+
 }
 
 
 // =========================================================
-// TIMER STATE
+// TIMER STATE UPDATE
 // =========================================================
 
 function updateTimerState() {
@@ -5483,60 +3378,100 @@ function updateTimerState() {
     !timer.running ||
     timer.startedAt === null
   ) {
+
+    updateTimerDisplay();
+
     return;
+
   }
 
-  const now = Date.now();
+
+  const now =
+    Date.now();
+
 
   const delta =
-    now -
-    timer.startedAt;
+    Math.max(
+      0,
+      now -
+      timer.startedAt
+    );
 
-  if (timer.mode === "stopwatch") {
 
-    timer.elapsedMs += delta;
+  if (
+    timer.mode ===
+    "stopwatch"
+  ) {
 
-    timer.startedAt = now;
+    timer.elapsedMs +=
+      delta;
+
+
+    timer.startedAt =
+      now;
 
   } else {
 
-    timer.countdownRemainingMs -=
-      delta;
+    timer.countdownRemainingMs =
+      Math.max(
+        0,
+        timer.countdownRemainingMs -
+        delta
+      );
 
-    timer.startedAt = now;
+
+    timer.startedAt =
+      now;
+
 
     timer.elapsedMs =
       timer.countdownDurationMs -
       timer.countdownRemainingMs;
 
+
     if (
-      timer.countdownRemainingMs <= 0
+      timer.countdownRemainingMs <=
+      0
     ) {
 
-      timer.countdownRemainingMs = 0;
+      timer.countdownRemainingMs =
+        0;
 
       timer.elapsedMs =
         timer.countdownDurationMs;
 
-      timer.running = false;
+      timer.running =
+        false;
 
-      timer.startedAt = null;
+      timer.startedAt =
+        null;
 
-      saveTimerStudyDelta();
 
-      timer.savedMs = 0;
+      saveTimerStudyDelta(
+        true
+      );
+
 
       updateTimerDisplay();
+
+      updateMainUI();
 
       showTimerEnded();
 
       return;
+
     }
+
   }
 
-  saveTimerStudyDelta(false);
+
+  saveTimerStudyDelta(
+    false
+  );
+
 
   updateTimerDisplay();
+
 }
 
 
@@ -5544,30 +3479,89 @@ function updateTimerState() {
 // SAVE TIMER STUDY DELTA
 // =========================================================
 
-function saveTimerStudyDelta(resetSaved = false) {
+function saveTimerStudyDelta(
+  resetSaved = false
+) {
 
   const current =
     timer.elapsedMs;
 
+
   const unsaved =
     Math.max(
       0,
-      current - timer.savedMs
+      current -
+      timer.savedMs
     );
 
-  if (unsaved >= 1000) {
 
-    addStudySeconds(
+  if (
+    unsaved >= 1000
+  ) {
+
+    const seconds =
       Math.floor(
         unsaved / 1000
-      )
+      );
+
+
+    addStudySeconds(
+      seconds
     );
+
   }
+
 
   timer.savedMs =
     resetSaved
       ? 0
       : current;
+
+}
+
+
+// =========================================================
+// COUNTDOWN INPUT HELPERS
+// =========================================================
+
+function getCountdownInputMs() {
+
+  const minutes =
+    Number(
+      $("countdownMinutes")
+        ?.value || 0
+    );
+
+
+  const seconds =
+    Number(
+      $("countdownSeconds")
+        ?.value || 0
+    );
+
+
+  if (
+    !Number.isFinite(minutes) ||
+    !Number.isFinite(seconds) ||
+    minutes < 0 ||
+    seconds < 0 ||
+    seconds >= 60
+  ) {
+
+    return 0;
+
+  }
+
+
+  return (
+    Math.round(minutes) *
+    60 *
+    1000
+  ) + (
+    Math.round(seconds) *
+    1000
+  );
+
 }
 
 
@@ -5575,30 +3569,56 @@ function saveTimerStudyDelta(resetSaved = false) {
 // TIMER MODE
 // =========================================================
 
-function selectTimerMode(mode) {
+function selectTimerMode(
+  mode
+) {
+
+  if (
+    mode !== "stopwatch" &&
+    mode !== "countdown"
+  ) {
+
+    return;
+
+  }
+
+
+  // Stop the previous mode without
+  // destroying its saved study time.
 
   if (timer.running) {
 
     updateTimerState();
 
-    timer.running = false;
+    timer.running =
+      false;
 
-    timer.startedAt = null;
+    timer.startedAt =
+      null;
 
     saveTimerStudyDelta();
+
   }
 
-  timer.mode = mode;
 
-  timer.elapsedMs = 0;
+  timer.mode =
+    mode;
 
-  timer.savedMs = 0;
+  timer.elapsedMs =
+    0;
 
-  timer.countdownDurationMs = 0;
+  timer.savedMs =
+    0;
 
-  timer.countdownRemainingMs = 0;
+  timer.countdownDurationMs =
+    0;
 
-  timer.lastDisplaySecond = -1;
+  timer.countdownRemainingMs =
+    0;
+
+  timer.lastDisplaySecond =
+    -1;
+
 
   $("stopwatchMode")
     ?.classList.toggle(
@@ -5606,11 +3626,13 @@ function selectTimerMode(mode) {
       mode === "stopwatch"
     );
 
+
   $("countdownMode")
     ?.classList.toggle(
       "active",
       mode === "countdown"
     );
+
 
   $("countdownInput")
     ?.classList.toggle(
@@ -5618,76 +3640,87 @@ function selectTimerMode(mode) {
       mode !== "countdown"
     );
 
+
   if ($("timerDisplay")) {
 
     $("timerDisplay").textContent =
       "00:00:00";
+
   }
+
 }
 
 
 // =========================================================
-// START STUDY TIMER
+// START TIMER
 // =========================================================
 
 function startStudyTimer() {
 
-  if (timer.running) return;
+  if (timer.running) {
+    return;
+  }
 
-  if (timer.mode === "countdown") {
+
+  if (
+    timer.mode ===
+    "countdown"
+  ) {
+
+    // If countdown is at zero,
+    // create a NEW countdown from the inputs.
 
     if (
-      timer.countdownRemainingMs <= 0
+      timer.countdownRemainingMs <=
+      0
     ) {
 
-      const minutes =
-        Number(
-          $("countdownMinutes")?.value || 0
-        );
+      const duration =
+        getCountdownInputMs();
 
-      const seconds =
-        Number(
-          $("countdownSeconds")?.value || 0
-        );
 
       if (
-        !Number.isFinite(minutes) ||
-        !Number.isFinite(seconds) ||
-        minutes < 0 ||
-        seconds < 0 ||
-        seconds > 59 ||
-        (minutes === 0 && seconds === 0)
+        duration <= 0
       ) {
 
         alert(
-          "Enter a valid countdown time."
+          "Enter a countdown time."
         );
 
         return;
+
       }
 
+
       timer.countdownDurationMs =
-        (
-          minutes * 60 +
-          seconds
-        ) * 1000;
+        duration;
 
       timer.countdownRemainingMs =
-        timer.countdownDurationMs;
+        duration;
 
-      timer.elapsedMs = 0;
+      timer.elapsedMs =
+        0;
 
-      timer.savedMs = 0;
+      timer.savedMs =
+        0;
+
     }
+
   }
 
-  timer.running = true;
 
-  timer.startedAt = Date.now();
+  timer.running =
+    true;
 
-  timer.lastDisplaySecond = -1;
+  timer.startedAt =
+    Date.now();
+
+  timer.lastDisplaySecond =
+    -1;
+
 
   updateTimerDisplay();
+
 }
 
 
@@ -5697,22 +3730,33 @@ function startStudyTimer() {
 
 function pauseStudyTimer() {
 
-  if (!timer.running) return;
+  if (!timer.running) {
+    return;
+  }
+
+
+  // First save the exact time
+  // that has actually elapsed.
 
   updateTimerState();
 
-  if (timer.running) {
 
-    timer.running = false;
+  timer.running =
+    false;
 
-    timer.startedAt = null;
-  }
+  timer.startedAt =
+    null;
+
+
+  // Save any remaining unsaved study time.
 
   saveTimerStudyDelta();
+
 
   updateTimerDisplay();
 
   updateMainUI();
+
 }
 
 
@@ -5723,32 +3767,53 @@ function pauseStudyTimer() {
 function resetStudyTimer() {
 
   if (timer.running) {
+
     updateTimerState();
+
+    timer.running =
+      false;
+
+    timer.startedAt =
+      null;
+
   }
+
 
   saveTimerStudyDelta();
 
-  timer.running = false;
 
-  timer.startedAt = null;
+  timer.elapsedMs =
+    0;
 
-  timer.elapsedMs = 0;
+  timer.savedMs =
+    0;
 
-  timer.savedMs = 0;
+  timer.countdownDurationMs =
+    0;
 
-  timer.countdownDurationMs = 0;
+  timer.countdownRemainingMs =
+    0;
 
-  timer.countdownRemainingMs = 0;
+  timer.lastDisplaySecond =
+    -1;
 
-  timer.lastDisplaySecond = -1;
 
   if ($("timerDisplay")) {
 
     $("timerDisplay").textContent =
       "00:00:00";
+
   }
 
+
+  $("timerEndedReminder")
+    ?.classList.add(
+      "hidden"
+    );
+
+
   updateMainUI();
+
 }
 
 
@@ -5760,8 +3825,10 @@ function saveManualStudyTime() {
 
   const minutes =
     Number(
-      $("manualStudyTime")?.value || 0
+      $("manualStudyTime")
+        ?.value || 0
     );
+
 
   if (
     !Number.isFinite(minutes) ||
@@ -5773,31 +3840,47 @@ function saveManualStudyTime() {
     );
 
     return;
+
   }
 
+
   addStudySeconds(
-    Math.round(minutes * 60)
+    Math.round(
+      minutes * 60
+    )
   );
 
-  $("manualStudyTime").value = "";
+
+  if ($("manualStudyTime")) {
+
+    $("manualStudyTime").value =
+      "";
+
+  }
+
 }
 
 
 // =========================================================
-// TIMER END
+// TIMER ENDED
 // =========================================================
 
 function showTimerEnded() {
 
   $("timerEndedReminder")
-    ?.classList.remove("hidden");
+    ?.classList.remove(
+      "hidden"
+    );
+
 
   playAlarm();
+
 
   sendNotification(
     "Timer Ended",
     "Your countdown timer has reached 00:00."
   );
+
 }
 
 
@@ -5809,42 +3892,60 @@ function playAlarm() {
       window.AudioContext ||
       window.webkitAudioContext;
 
-    if (!AudioContextClass) return;
+
+    if (!AudioContextClass) {
+      return;
+    }
+
 
     const context =
       new AudioContextClass();
 
+
     const oscillator =
       context.createOscillator();
+
 
     const gain =
       context.createGain();
 
-    oscillator.frequency.value = 800;
+
+    oscillator.frequency.value =
+      800;
+
 
     gain.gain.setValueAtTime(
       0.15,
       context.currentTime
     );
 
+
     gain.gain.exponentialRampToValueAtTime(
       0.001,
       context.currentTime + 0.8
     );
 
-    oscillator.connect(gain);
+
+    oscillator.connect(
+      gain
+    );
+
 
     gain.connect(
       context.destination
     );
 
+
     oscillator.start();
+
 
     oscillator.stop(
       context.currentTime + 0.8
     );
 
+
   } catch (_) {}
+
 }
 
 
@@ -5854,34 +3955,47 @@ function playAlarm() {
 
 async function enableNotifications() {
 
-  if (!("Notification" in window)) {
+  if (
+    !("Notification" in window)
+  ) {
 
     alert(
       "This browser does not support notifications."
     );
 
     return;
+
   }
+
 
   try {
 
     const permission =
       await Notification.requestPermission();
 
-    if (permission === "granted") {
+
+    if (
+      permission ===
+      "granted"
+    ) {
 
       updateNotificationButton();
+
 
       sendNotification(
         "Daily Target",
         "Notifications are enabled."
       );
 
-    } else if (permission === "denied") {
+    } else if (
+      permission ===
+      "denied"
+    ) {
 
       alert(
         "Notifications are blocked for this site. Open Chrome site settings and allow Notifications for this website."
       );
+
 
       updateNotificationButton();
 
@@ -5890,16 +4004,22 @@ async function enableNotifications() {
       alert(
         "Notification permission was not granted."
       );
+
     }
 
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      error
+    );
+
 
     alert(
       "Notification permission could not be requested in this browser."
     );
+
   }
+
 }
 
 
@@ -5908,37 +4028,56 @@ function updateNotificationButton() {
   const button =
     $("notificationBtn");
 
-  if (!button) return;
 
-  if (!("Notification" in window)) {
+  if (!button) {
+    return;
+  }
+
+
+  if (
+    !("Notification" in window)
+  ) {
 
     button.textContent =
       "Notifications Not Supported";
 
     return;
+
   }
 
+
   button.textContent =
-    Notification.permission === "granted"
+    Notification.permission ===
+    "granted"
       ? "✓ Notifications Enabled"
       : "Enable Notifications";
+
 }
 
 
-function sendNotification(title, body) {
+function sendNotification(
+  title,
+  body
+) {
 
   if (
     !("Notification" in window) ||
-    Notification.permission !== "granted"
+    Notification.permission !==
+      "granted"
   ) {
+
     return;
+
   }
+
 
   try {
 
     new Notification(
       title,
-      { body }
+      {
+        body
+      }
     );
 
   } catch (error) {
@@ -5947,7 +4086,9 @@ function sendNotification(title, body) {
       "Notification unavailable",
       error
     );
+
   }
+
 }
 
 
@@ -5963,81 +4104,113 @@ function notificationKey(
 ) {
 
   return `${type}_${id}_${date}_${time}`;
+
 }
 
 
 function checkScheduledNotifications() {
 
-  const now = new Date();
+  const now =
+    new Date();
 
-  const date = todayKey();
+
+  const date =
+    todayKey();
+
 
   const time =
-    `${String(now.getHours()).padStart(2, "0")}:${String(
+    `${String(
+      now.getHours()
+    ).padStart(2, "0")}:${String(
       now.getMinutes()
     ).padStart(2, "0")}`;
 
-  const tasks = getTasks(date);
 
-  tasks.forEach(task => {
+  const tasks =
+    getTasks(date);
 
-    if (
-      !task.completed &&
-      task.time === time
-    ) {
 
-      const key =
-        notificationKey(
-          "task",
-          task.id,
-          date,
-          time
-        );
+  tasks.forEach(
+    task => {
 
-      if (!data.notified[key]) {
+      if (
+        !task.completed &&
+        task.time === time
+      ) {
 
-        data.notified[key] = true;
+        const key =
+          notificationKey(
+            "task",
+            task.id,
+            date,
+            time
+          );
 
-        save();
 
-        showScheduledReminder(
-          task.id,
-          task.name,
-          task.time
-        );
+        if (
+          !data.notified[key]
+        ) {
+
+          data.notified[key] =
+            true;
+
+          save();
+
+
+          showScheduledReminder(
+            task.id,
+            task.name,
+            task.time
+          );
+
+        }
+
       }
+
     }
-  });
+  );
 
-  data.fixedTargets.forEach(target => {
 
-    if (
-      !target.completed &&
-      target.time === time
-    ) {
+  data.fixedTargets.forEach(
+    target => {
 
-      const key =
-        notificationKey(
-          "fixed",
-          target.id,
-          date,
-          time
-        );
+      if (
+        !target.completed &&
+        target.time === time
+      ) {
 
-      if (!data.notified[key]) {
+        const key =
+          notificationKey(
+            "fixed",
+            target.id,
+            date,
+            time
+          );
 
-        data.notified[key] = true;
 
-        save();
+        if (
+          !data.notified[key]
+        ) {
 
-        showScheduledReminder(
-          target.id,
-          target.name,
-          target.time
-        );
+          data.notified[key] =
+            true;
+
+          save();
+
+
+          showScheduledReminder(
+            target.id,
+            target.name,
+            target.time
+          );
+
+        }
+
       }
+
     }
-  });
+  );
+
 }
 
 
@@ -6051,29 +4224,44 @@ function showScheduledReminder(
 
     $("reminderText").textContent =
       `Time to complete the task: ${name} (${formatTime(time)}).`;
+
   }
 
+
   $("reminder")
-    ?.classList.remove("hidden");
+    ?.classList.remove(
+      "hidden"
+    );
+
 
   playAlarm();
+
 
   sendNotification(
     "Time to complete the task",
     `${name} — ${formatTime(time)}`
   );
 
+
   if (reminderTimer) {
-    clearTimeout(reminderTimer);
+
+    clearTimeout(
+      reminderTimer
+    );
+
   }
 
-  reminderTimer = null;
+
+  reminderTimer =
+    null;
+
 
   $("reminderComplete")
     ?.setAttribute(
       "data-reminder-id",
       id
     );
+
 }
 
 
@@ -6081,22 +4269,37 @@ function showScheduledReminder(
 // REMINDER CONTROLS
 // =========================================================
 
-function stopReminderForTask(id) {
+function stopReminderForTask(
+  id
+) {
 
   if (
     $("reminderComplete")
-      ?.getAttribute("data-reminder-id") === id
+      ?.getAttribute(
+        "data-reminder-id"
+      ) === id
   ) {
 
     $("reminder")
-      ?.classList.add("hidden");
+      ?.classList.add(
+        "hidden"
+      );
+
 
     if (reminderTimer) {
-      clearTimeout(reminderTimer);
+
+      clearTimeout(
+        reminderTimer
+      );
+
     }
 
-    reminderTimer = null;
+
+    reminderTimer =
+      null;
+
   }
+
 }
 
 
@@ -6104,20 +4307,32 @@ function completeReminderTarget() {
 
   const id =
     $("reminderComplete")
-      ?.getAttribute("data-reminder-id");
+      ?.getAttribute(
+        "data-reminder-id"
+      );
 
-  if (!id) return;
 
-  const date = todayKey();
+  if (!id) {
+    return;
+  }
+
+
+  const date =
+    todayKey();
+
 
   const task =
     getTasks(date).find(
-      item => item.id === id
+      item =>
+        item.id === id
     );
+
 
   if (task) {
 
-    task.completed = true;
+    task.completed =
+      true;
+
 
     setTasks(
       date,
@@ -6128,75 +4343,115 @@ function completeReminderTarget() {
 
     const fixed =
       data.fixedTargets.find(
-        item => item.id === id
+        item =>
+          item.id === id
       );
+
 
     if (fixed) {
 
-      fixed.completed = true;
+      fixed.completed =
+        true;
 
       fixed.completedDate =
-        todayKey();
+        date;
+
     }
+
   }
 
-  updateDayCompletion(date);
+
+  updateDayCompletion(
+    date
+  );
+
 
   $("reminder")
-    ?.classList.add("hidden");
+    ?.classList.add(
+      "hidden"
+    );
+
 
   updateMainUI();
 
   renderRegularTasks();
 
   renderFixedTargets();
+
 }
 
 
 function remindLater() {
 
   $("reminder")
-    ?.classList.add("hidden");
+    ?.classList.add(
+      "hidden"
+    );
+
 
   const id =
     $("reminderComplete")
-      ?.getAttribute("data-reminder-id");
+      ?.getAttribute(
+        "data-reminder-id"
+      );
 
-  if (!id) return;
 
-  if (reminderTimer) {
-    clearTimeout(reminderTimer);
+  if (!id) {
+    return;
   }
 
+
+  if (reminderTimer) {
+
+    clearTimeout(
+      reminderTimer
+    );
+
+  }
+
+
   reminderTimer =
-    setTimeout(() => {
+    setTimeout(
+      () => {
 
-      const task =
-        getTasks(todayKey()).find(
-          item => item.id === id
-        );
+        const task =
+          getTasks(
+            todayKey()
+          ).find(
+            item =>
+              item.id === id
+          );
 
-      const fixed =
-        data.fixedTargets.find(
-          item => item.id === id
-        );
 
-      const target =
-        task || fixed;
+        const fixed =
+          data.fixedTargets.find(
+            item =>
+              item.id === id
+          );
 
-      if (
-        target &&
-        !target.completed
-      ) {
 
-        showScheduledReminder(
-          id,
-          target.name,
-          target.time
-        );
-      }
+        const target =
+          task ||
+          fixed;
 
-    }, 60 * 60 * 1000);
+
+        if (
+          target &&
+          !target.completed
+        ) {
+
+          showScheduledReminder(
+            id,
+            target.name,
+            target.time
+          );
+
+        }
+
+      },
+      60 * 60 * 1000
+    );
+
 }
 
 
@@ -6206,11 +4461,14 @@ function remindLater() {
 
 function bindEvents() {
 
+  // Regular target
+
   $("openRegularTarget")
     ?.addEventListener(
       "click",
       openRegularTasks
     );
+
 
   $("editDaily")
     ?.addEventListener(
@@ -6218,11 +4476,13 @@ function bindEvents() {
       openPlanner
     );
 
+
   $("completeAllRegular")
     ?.addEventListener(
       "click",
       completeAllRegular
     );
+
 
   $("completeAllRegularFromView")
     ?.addEventListener(
@@ -6230,11 +4490,15 @@ function bindEvents() {
       completeAllRegular
     );
 
+
+  // Interfaces
+
   $("closeRegularTasks")
     ?.addEventListener(
       "click",
       closeAllViews
     );
+
 
   $("closeRegularPlanner")
     ?.addEventListener(
@@ -6242,11 +4506,13 @@ function bindEvents() {
       closeAllViews
     );
 
+
   $("closeFixedTargets")
     ?.addEventListener(
       "click",
       closeAllViews
     );
+
 
   $("closeWeeklyStats")
     ?.addEventListener(
@@ -6254,17 +4520,28 @@ function bindEvents() {
       closeAllViews
     );
 
+
+  // Tasks
+
   $("addTaskBtn")
     ?.addEventListener(
       "click",
-      () => openTaskModal(todayKey())
+      () =>
+        openTaskModal(
+          todayKey()
+        )
     );
+
 
   $("addTaskFromPlanner")
     ?.addEventListener(
       "click",
-      () => openTaskModal(plannerDate)
+      () =>
+        openTaskModal(
+          plannerDate
+        )
     );
+
 
   $("saveTaskBtn")
     ?.addEventListener(
@@ -6272,17 +4549,20 @@ function bindEvents() {
       saveTask
     );
 
+
   $("closeTaskModal")
     ?.addEventListener(
       "click",
       closeTaskModal
     );
 
+
   $("plannerDate")
     ?.addEventListener(
       "change",
       renderPlanner
     );
+
 
   $("saveRegularPlan")
     ?.addEventListener(
@@ -6294,8 +4574,12 @@ function bindEvents() {
         updateMainUI();
 
         closeAllViews();
+
       }
     );
+
+
+  // Fixed targets
 
   $("openFixedTargets")
     ?.addEventListener(
@@ -6303,11 +4587,16 @@ function bindEvents() {
       openFixedTargets
     );
 
+
   $("addFixedTarget")
     ?.addEventListener(
       "click",
-      () => openTargetModal("fixed")
+      () =>
+        openTargetModal(
+          "fixed"
+        )
     );
+
 
   $("saveTarget")
     ?.addEventListener(
@@ -6315,11 +4604,15 @@ function bindEvents() {
       saveTarget
     );
 
+
   $("closeModal")
     ?.addEventListener(
       "click",
       closeModal
     );
+
+
+  // Weekly statistics
 
   $("openWeeklyStats")
     ?.addEventListener(
@@ -6327,17 +4620,28 @@ function bindEvents() {
       openWeeklyStats
     );
 
+
+  // Timer
+
   $("stopwatchMode")
     ?.addEventListener(
       "click",
-      () => selectTimerMode("stopwatch")
+      () =>
+        selectTimerMode(
+          "stopwatch"
+        )
     );
+
 
   $("countdownMode")
     ?.addEventListener(
       "click",
-      () => selectTimerMode("countdown")
+      () =>
+        selectTimerMode(
+          "countdown"
+        )
     );
+
 
   $("startStudyTimer")
     ?.addEventListener(
@@ -6345,11 +4649,13 @@ function bindEvents() {
       startStudyTimer
     );
 
+
   $("pauseStudyTimer")
     ?.addEventListener(
       "click",
       pauseStudyTimer
     );
+
 
   $("resetStudyTimer")
     ?.addEventListener(
@@ -6357,11 +4663,15 @@ function bindEvents() {
       resetStudyTimer
     );
 
+
   $("saveManualStudyTime")
     ?.addEventListener(
       "click",
       saveManualStudyTime
     );
+
+
+  // Notifications
 
   $("notificationBtn")
     ?.addEventListener(
@@ -6369,11 +4679,13 @@ function bindEvents() {
       enableNotifications
     );
 
+
   $("reminderComplete")
     ?.addEventListener(
       "click",
       completeReminderTarget
     );
+
 
   $("remindLater")
     ?.addEventListener(
@@ -6381,13 +4693,19 @@ function bindEvents() {
       remindLater
     );
 
+
   $("closeTimerEndedReminder")
     ?.addEventListener(
       "click",
       () =>
         $("timerEndedReminder")
-          ?.classList.add("hidden")
+          ?.classList.add(
+            "hidden"
+          )
     );
+
+
+  // Page visibility
 
   document.addEventListener(
     "visibilitychange",
@@ -6400,9 +4718,14 @@ function bindEvents() {
         checkScheduledNotifications();
 
         updateTimerDisplay();
+
       }
+
     }
   );
+
+
+  // Graph resize
 
   window.addEventListener(
     "resize",
@@ -6410,15 +4733,20 @@ function bindEvents() {
 
       if (
         !$("weeklyStatsView")
-          ?.classList.contains("hidden")
+          ?.classList.contains(
+            "hidden"
+          )
       ) {
 
         renderStudyChart(
           getWeekKeys()
         );
+
       }
+
     }
   );
+
 }
 
 
@@ -6428,29 +4756,44 @@ function bindEvents() {
 
 function cleanOldNotificationRecords() {
 
-  const cutoff = new Date();
+  const cutoff =
+    new Date();
+
 
   cutoff.setDate(
     cutoff.getDate() - 14
   );
 
+
   for (
-    const key of Object.keys(data.notified)
+    const key
+    of Object.keys(
+      data.notified
+    )
   ) {
 
-    const parts = key.split("_");
+    const parts =
+      key.split("_");
+
 
     const date =
       parts[parts.length - 2];
 
+
     if (
-      /^\d{4}-\d{2}-\d{2}$/.test(date) &&
-      dateFromKey(date) < cutoff
+      /^\d{4}-\d{2}-\d{2}$/.test(
+        date
+      ) &&
+      dateFromKey(date) <
+        cutoff
     ) {
 
       delete data.notified[key];
+
     }
+
   }
+
 }
 
 
@@ -6468,18 +4811,28 @@ function init() {
 
   bindEvents();
 
-  selectTimerMode("stopwatch");
+  selectTimerMode(
+    "stopwatch"
+  );
 
   updateMainUI();
 
   checkScheduledNotifications();
 
+
+  // Timer update
+
   setInterval(
     () => {
+
       updateTimerState();
+
     },
     250
   );
+
+
+  // Scheduled notifications
 
   notificationCheckTimer =
     setInterval(
@@ -6487,10 +4840,14 @@ function init() {
       1000
     );
 
+
+  // Dashboard refresh
+
   setInterval(
     updateMainUI,
     60000
   );
+
 }
 
 
@@ -6498,3 +4855,8 @@ document.addEventListener(
   "DOMContentLoaded",
   init
 );
+
+
+// =========================================================
+// END OF DAILY TARGET JAVASCRIPT
+// =========================================================
