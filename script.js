@@ -4168,3 +4168,2333 @@ document.addEventListener(
 "DOMContentLoaded",
 init
 );
+// =========================================================
+// FULL INTERFACE MANAGEMENT
+// =========================================================
+
+function showView(id) {
+
+  [
+    "regularTasksView",
+    "regularPlanner",
+    "fixedTargetsView",
+    "weeklyStatsView"
+  ].forEach(viewId => {
+    $(viewId)?.classList.add("hidden");
+  });
+
+  $(id)?.classList.remove("hidden");
+
+  document.body.style.overflow = "hidden";
+}
+
+
+function closeAllViews() {
+
+  [
+    "regularTasksView",
+    "regularPlanner",
+    "fixedTargetsView",
+    "weeklyStatsView"
+  ].forEach(viewId => {
+    $(viewId)?.classList.add("hidden");
+  });
+
+  document.body.style.overflow = "";
+}
+
+
+// =========================================================
+// REGULAR TASKS INTERFACE
+// =========================================================
+
+function openRegularTasks() {
+  renderRegularTasks();
+  showView("regularTasksView");
+}
+
+
+function renderRegularTasks() {
+
+  const date = todayKey();
+  const tasks = getTasks(date);
+
+  if ($("regularTasksDate")) {
+    $("regularTasksDate").textContent =
+      formatDateLong(date);
+  }
+
+  if ($("regularTasksCount")) {
+    $("regularTasksCount").textContent =
+      `${tasks.length} task${tasks.length === 1 ? "" : "s"}`;
+  }
+
+  const completed =
+    tasks.filter(task => task.completed).length;
+
+  if ($("regularTasksProgress")) {
+    $("regularTasksProgress").textContent =
+      `${completed} / ${tasks.length}`;
+  }
+
+  if ($("regularTasksProgressFill")) {
+    $("regularTasksProgressFill").style.width =
+      `${tasks.length ? (completed / tasks.length) * 100 : 0}%`;
+  }
+
+  const list = $("regularTasksList");
+
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  if (!tasks.length) {
+
+    list.innerHTML = `
+      <div class="empty-state">
+        <strong>No tasks planned</strong>
+        <span>Add your first regular task.</span>
+      </div>
+    `;
+
+    return;
+  }
+
+  const sortedTasks = [...tasks].sort(
+    (a, b) =>
+      (a.time || "99:99").localeCompare(
+        b.time || "99:99"
+      )
+  );
+
+  sortedTasks.forEach(task => {
+
+    const row = document.createElement("div");
+
+    row.className =
+      `task-row${task.completed ? " completed" : ""}`;
+
+    row.innerHTML = `
+      <input
+        class="task-checkbox"
+        type="checkbox"
+        ${task.completed ? "checked" : ""}
+        aria-label="Complete task"
+      >
+
+      <div class="task-row-content">
+        <div class="task-row-name">
+          ${escapeHtml(task.name)}
+        </div>
+
+        <div class="task-row-time">
+          ${
+            task.time
+              ? formatTime(task.time)
+              : "No time set"
+          }
+        </div>
+      </div>
+
+      <button
+        class="task-delete-button"
+        type="button"
+        title="Delete task"
+      >
+        ×
+      </button>
+    `;
+
+    row
+      .querySelector(".task-checkbox")
+      .addEventListener("change", event => {
+
+        task.completed =
+          event.target.checked;
+
+        setTasks(date, tasks);
+
+        updateDayCompletion(date);
+
+        renderRegularTasks();
+        updateMainUI();
+
+        if (task.completed) {
+          stopReminderForTask(task.id);
+        }
+      });
+
+    row
+      .querySelector(".task-delete-button")
+      .addEventListener("click", () => {
+
+        if (!confirm(`Delete "${task.name}"?`)) {
+          return;
+        }
+
+        setTasks(
+          date,
+          tasks.filter(item => item.id !== task.id)
+        );
+
+        updateDayCompletion(date);
+
+        renderRegularTasks();
+        updateMainUI();
+      });
+
+    list.appendChild(row);
+  });
+}
+
+
+// =========================================================
+// REGULAR TASK PLANNER
+// =========================================================
+
+function openPlanner() {
+
+  plannerDate = todayKey();
+
+  if ($("plannerDate")) {
+    $("plannerDate").value = plannerDate;
+  }
+
+  renderPlanner();
+
+  showView("regularPlanner");
+}
+
+
+function renderPlanner() {
+
+  const date =
+    $("plannerDate")?.value ||
+    plannerDate ||
+    todayKey();
+
+  plannerDate = date;
+
+  const list = $("plannerTasksList");
+
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  const tasks = getTasks(date);
+
+  if (!tasks.length) {
+
+    list.innerHTML = `
+      <div class="empty-state">
+        <strong>No tasks for this date</strong>
+        <span>Use Add to create one.</span>
+      </div>
+    `;
+
+    return;
+  }
+
+  tasks.forEach(task => {
+
+    const row = document.createElement("div");
+
+    row.className = "task-row";
+
+    row.innerHTML = `
+      <div class="task-row-content">
+        <div class="task-row-name">
+          ${escapeHtml(task.name)}
+        </div>
+
+        <div class="task-row-time">
+          ${
+            task.time
+              ? formatTime(task.time)
+              : "No time set"
+          }
+        </div>
+      </div>
+
+      <button
+        class="task-delete-button"
+        type="button"
+      >
+        ×
+      </button>
+    `;
+
+    row
+      .querySelector("button")
+      .addEventListener("click", () => {
+
+        setTasks(
+          date,
+          tasks.filter(item => item.id !== task.id)
+        );
+
+        save();
+
+        renderPlanner();
+        updateMainUI();
+      });
+
+    list.appendChild(row);
+  });
+}
+
+
+// =========================================================
+// ADD TASK MODAL
+// =========================================================
+
+function openTaskModal(date = todayKey()) {
+
+  if ($("taskNameInput")) {
+    $("taskNameInput").value = "";
+  }
+
+  if ($("taskDateInput")) {
+    $("taskDateInput").value = date;
+  }
+
+  if ($("taskTimeInput")) {
+    $("taskTimeInput").value = "";
+  }
+
+  $("taskModal")?.classList.remove("hidden");
+
+  setTimeout(
+    () => $("taskNameInput")?.focus(),
+    50
+  );
+}
+
+
+function closeTaskModal() {
+  $("taskModal")?.classList.add("hidden");
+}
+
+
+function saveTask() {
+
+  const name =
+    $("taskNameInput")?.value.trim();
+
+  const date =
+    $("taskDateInput")?.value ||
+    todayKey();
+
+  const time =
+    $("taskTimeInput")?.value ||
+    "";
+
+  if (!name) {
+    alert("Please enter a task name.");
+    return;
+  }
+
+  if (!date) {
+    alert("Please select a date.");
+    return;
+  }
+
+  const tasks = getTasks(date);
+
+  tasks.push({
+    id: makeId("task"),
+    name,
+    date,
+    time,
+    completed: false
+  });
+
+  setTasks(date, tasks);
+
+  save();
+
+  closeTaskModal();
+
+  updateMainUI();
+  renderPlanner();
+
+  if (
+    !$("regularTasksView")
+      ?.classList.contains("hidden")
+  ) {
+    renderRegularTasks();
+  }
+}
+
+
+// =========================================================
+// COMPLETE ALL REGULAR TASKS
+// =========================================================
+
+function completeAllRegular() {
+
+  const date = todayKey();
+
+  const tasks = getTasks(date);
+
+  if (!tasks.length) {
+    alert(
+      "There are no regular tasks to complete."
+    );
+    return;
+  }
+
+  tasks.forEach(
+    task => {
+      task.completed = true;
+    }
+  );
+
+  setTasks(date, tasks);
+
+  updateDayCompletion(date);
+
+  renderRegularTasks();
+  updateMainUI();
+}
+
+
+// =========================================================
+// FIXED TARGETS INTERFACE
+// =========================================================
+
+function openFixedTargets() {
+
+  renderFixedTargets();
+
+  showView("fixedTargetsView");
+}
+
+
+function renderFixedTargets() {
+
+  const list = $("fixedTargetsList");
+
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  if ($("fixedTargetsCount")) {
+    $("fixedTargetsCount").textContent =
+      `${data.fixedTargets.length} target${
+        data.fixedTargets.length === 1
+          ? ""
+          : "s"
+      }`;
+  }
+
+  if (!data.fixedTargets.length) {
+
+    list.innerHTML = `
+      <div class="empty-state">
+        <strong>No fixed targets</strong>
+        <span>Add a target that repeats every day.</span>
+      </div>
+    `;
+
+    return;
+  }
+
+  data.fixedTargets.forEach(target => {
+
+    const row = document.createElement("div");
+
+    row.className = "fixed-target-row";
+
+    row.innerHTML = `
+      <div class="fixed-target-main">
+
+        <input
+          class="task-checkbox"
+          type="checkbox"
+          ${target.completed ? "checked" : ""}
+          aria-label="Complete fixed target"
+        >
+
+        <div class="fixed-target-info">
+
+          <div class="fixed-target-name">
+            ${escapeHtml(target.name)}
+          </div>
+
+          <div class="fixed-target-time">
+            ${
+              target.time
+                ? formatTime(target.time)
+                : "No time set"
+            }
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="fixed-target-actions">
+
+        <button
+          class="outline-button edit-fixed"
+          type="button"
+        >
+          Edit
+        </button>
+
+        <button
+          class="secondary-button delete-fixed"
+          type="button"
+        >
+          Delete
+        </button>
+
+      </div>
+    `;
+
+    row
+      .querySelector(".task-checkbox")
+      .addEventListener("change", event => {
+
+        target.completed =
+          event.target.checked;
+
+        target.completedDate =
+          event.target.checked
+            ? todayKey()
+            : "";
+
+        save();
+
+        updateDayCompletion(todayKey());
+
+        renderFixedTargets();
+        updateMainUI();
+      });
+
+    row
+      .querySelector(".edit-fixed")
+      .addEventListener("click", () => {
+        openTargetModal("fixed", target.id);
+      });
+
+    row
+      .querySelector(".delete-fixed")
+      .addEventListener("click", () => {
+
+        if (!confirm(`Delete "${target.name}"?`)) {
+          return;
+        }
+
+        data.fixedTargets =
+          data.fixedTargets.filter(
+            item => item.id !== target.id
+          );
+
+        save();
+
+        renderFixedTargets();
+        updateMainUI();
+      });
+
+    list.appendChild(row);
+  });
+}
+
+
+// =========================================================
+// FIXED TARGET MODAL
+// =========================================================
+
+let editingFixedId = null;
+
+
+function openTargetModal(type, id = null) {
+
+  editingFixedId =
+    type === "fixed"
+      ? id
+      : null;
+
+  const target =
+    id
+      ? data.fixedTargets.find(
+          item => item.id === id
+        )
+      : null;
+
+  if ($("modalTitle")) {
+    $("modalTitle").textContent =
+      type === "fixed"
+        ? target
+          ? "Edit Fixed Target"
+          : "Add Fixed Target"
+        : "Target";
+  }
+
+  if ($("targetInput")) {
+    $("targetInput").value =
+      target?.name || "";
+  }
+
+  if ($("timeInput")) {
+    $("timeInput").value =
+      target?.time || "";
+  }
+
+  $("modal")?.classList.remove("hidden");
+
+  setTimeout(
+    () => $("targetInput")?.focus(),
+    50
+  );
+}
+
+
+function closeModal() {
+
+  $("modal")?.classList.add("hidden");
+
+  editingFixedId = null;
+}
+
+
+function saveTarget() {
+
+  const name =
+    $("targetInput")?.value.trim();
+
+  const time =
+    $("timeInput")?.value || "";
+
+  if (!name) {
+    alert("Please enter a target name.");
+    return;
+  }
+
+  if (!time) {
+    alert("Please select a time.");
+    return;
+  }
+
+  if (editingFixedId) {
+
+    const target =
+      data.fixedTargets.find(
+        item => item.id === editingFixedId
+      );
+
+    if (target) {
+      target.name = name;
+      target.time = time;
+    }
+
+  } else {
+
+    data.fixedTargets.push({
+      id: makeId("fixed"),
+      name,
+      time,
+      completed: false,
+      completedDate: todayKey()
+    });
+  }
+
+  save();
+
+  closeModal();
+
+  renderFixedTargets();
+  updateMainUI();
+}
+
+
+// =========================================================
+// WEEKLY STATISTICS
+// =========================================================
+
+function openWeeklyStats() {
+
+  renderWeeklyStats();
+
+  showView("weeklyStatsView");
+}
+
+
+function getWeekKeys() {
+
+  const today = new Date();
+
+  const day = today.getDay();
+
+  const mondayOffset =
+    day === 0
+      ? -6
+      : 1 - day;
+
+  const monday = new Date(today);
+
+  monday.setDate(
+    today.getDate() + mondayOffset
+  );
+
+  monday.setHours(0, 0, 0, 0);
+
+  return Array.from(
+    { length: 7 },
+    (_, index) => {
+
+      const date = new Date(monday);
+
+      date.setDate(
+        monday.getDate() + index
+      );
+
+      return `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}-${String(
+        date.getDate()
+      ).padStart(2, "0")}`;
+    }
+  );
+}
+
+
+function renderWeeklyStats() {
+
+  const keys = getWeekKeys();
+
+  if ($("weeklyStatsDateRange")) {
+
+    $("weeklyStatsDateRange").textContent =
+      `${formatDateShort(keys[0])} – ${formatDateShort(keys[6])}`;
+  }
+
+  renderStudyChart(keys);
+  renderStudyHistory(keys);
+  renderTaskHistory(keys);
+}
+// =========================================================
+// WEEKLY STUDY HISTORY
+// =========================================================
+
+function renderStudyHistory(keys) {
+
+  const container = $("weeklyStudyHistory");
+
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const now = new Date();
+
+  const actual = keys.filter(key => {
+
+    const date = dateFromKey(key);
+
+    return (
+      date <= now &&
+      getStudySeconds(key) > 0
+    );
+  });
+
+  if (!actual.length) {
+
+    container.innerHTML = `
+      <div class="empty-state">
+        <strong>No study time recorded</strong>
+        <span>
+          Use the stopwatch, countdown,
+          or manual entry.
+        </span>
+      </div>
+    `;
+
+    if ($("highestStudyTime"))
+      $("highestStudyTime").textContent = "—";
+
+    if ($("highestStudyDay"))
+      $("highestStudyDay").textContent = "—";
+
+    if ($("lowestStudyTime"))
+      $("lowestStudyTime").textContent = "—";
+
+    if ($("lowestStudyDay"))
+      $("lowestStudyDay").textContent = "—";
+
+    return;
+  }
+
+  actual.forEach(key => {
+
+    const date = dateFromKey(key);
+
+    const row = document.createElement("div");
+
+    row.className = "weekly-history-row";
+
+    row.innerHTML = `
+      <span class="weekly-history-date">
+        ${escapeHtml(
+          date.toLocaleDateString("en-IN", {
+            weekday: "long",
+            day: "numeric",
+            month: "short"
+          })
+        )}
+      </span>
+
+      <span class="weekly-history-value">
+        ${formatMinutes(getStudySeconds(key))}
+      </span>
+    `;
+
+    container.appendChild(row);
+  });
+
+  const sorted = [...actual].sort(
+    (a, b) =>
+      getStudySeconds(b) -
+      getStudySeconds(a)
+  );
+
+  const highest = sorted[0];
+  const lowest = sorted[sorted.length - 1];
+
+  if ($("highestStudyTime"))
+    $("highestStudyTime").textContent =
+      formatMinutes(getStudySeconds(highest));
+
+  if ($("highestStudyDay"))
+    $("highestStudyDay").textContent =
+      dateLabel(highest);
+
+  if ($("lowestStudyTime"))
+    $("lowestStudyTime").textContent =
+      formatMinutes(getStudySeconds(lowest));
+
+  if ($("lowestStudyDay"))
+    $("lowestStudyDay").textContent =
+      dateLabel(lowest);
+}
+
+
+// =========================================================
+// WEEKLY TASK HISTORY
+// =========================================================
+
+function renderTaskHistory(keys) {
+
+  const container = $("weeklyTaskHistory");
+
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  keys.forEach(key => {
+
+    const date = dateFromKey(key);
+
+    const tasks = getTasks(key);
+
+    let value = "No tasks planned";
+
+    if (tasks.length) {
+
+      const completed =
+        tasks.filter(
+          task => task.completed
+        ).length;
+
+      value =
+        tasks.every(
+          task => task.completed
+        )
+          ? "All tasks completed"
+          : `${completed}/${tasks.length} completed · Incomplete`;
+    }
+
+    const row = document.createElement("div");
+
+    row.className =
+      "weekly-history-row";
+
+    row.innerHTML = `
+      <span class="weekly-history-date">
+        ${escapeHtml(
+          date.toLocaleDateString("en-IN", {
+            weekday: "long",
+            day: "numeric",
+            month: "short",
+            year: "numeric"
+          })
+        )}
+      </span>
+
+      <span class="weekly-history-value">
+        ${escapeHtml(value)}
+      </span>
+    `;
+
+    container.appendChild(row);
+  });
+}
+
+
+// =========================================================
+// STUDY GRAPH
+// =========================================================
+
+function renderStudyChart(keys) {
+
+  const canvas = $("studyChart");
+
+  const empty = $("studyChartEmpty");
+
+  if (!canvas) return;
+
+  const now = new Date();
+
+  const values = keys.map(key => {
+
+    const date = dateFromKey(key);
+
+    if (date > now) {
+      return null;
+    }
+
+    const seconds =
+      getStudySeconds(key);
+
+    return seconds > 0
+      ? seconds / 60
+      : null;
+  });
+
+  const hasData =
+    values.some(
+      value =>
+        value !== null &&
+        value > 0
+    );
+
+  empty?.classList.toggle(
+    "hidden",
+    hasData
+  );
+
+  canvas.style.display =
+    hasData ? "block" : "none";
+
+  if (!hasData) return;
+
+  const rect =
+    canvas.getBoundingClientRect();
+
+  const width =
+    Math.max(
+      300,
+      Math.floor(rect.width || 700)
+    );
+
+  const height = 320;
+
+  const ratio =
+    window.devicePixelRatio || 1;
+
+  canvas.width =
+    width * ratio;
+
+  canvas.height =
+    height * ratio;
+
+  const context =
+    canvas.getContext("2d");
+
+  if (!context) return;
+
+  context.setTransform(
+    ratio,
+    0,
+    0,
+    ratio,
+    0,
+    0
+  );
+
+  context.clearRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+  const padding = {
+    left: 52,
+    right: 20,
+    top: 20,
+    bottom: 50
+  };
+
+  const plotWidth =
+    width -
+    padding.left -
+    padding.right;
+
+  const plotHeight =
+    height -
+    padding.top -
+    padding.bottom;
+
+  const numericValues =
+    values.filter(
+      value =>
+        value !== null &&
+        value > 0
+    );
+
+  const maximum =
+    Math.max(
+      1,
+      Math.ceil(
+        Math.max(...numericValues) * 1.2
+      )
+    );
+
+  context.font =
+    "12px system-ui, sans-serif";
+
+  context.textAlign = "right";
+
+  context.textBaseline = "middle";
+
+  context.strokeStyle = "#e2e5e8";
+
+  context.fillStyle = "#70757b";
+
+  context.lineWidth = 1;
+
+  for (let i = 0; i <= 4; i++) {
+
+    const y =
+      padding.top +
+      plotHeight -
+      plotHeight * i / 4;
+
+    context.beginPath();
+
+    context.moveTo(
+      padding.left,
+      y
+    );
+
+    context.lineTo(
+      width - padding.right,
+      y
+    );
+
+    context.stroke();
+
+    const label =
+      Math.round(
+        maximum * i / 4
+      );
+
+    context.fillText(
+      `${label}`,
+      padding.left - 9,
+      y
+    );
+  }
+
+  context.save();
+
+  context.translate(
+    15,
+    padding.top + plotHeight / 2
+  );
+
+  context.rotate(-Math.PI / 2);
+
+  context.textAlign = "center";
+
+  context.textBaseline = "middle";
+
+  context.fillStyle = "#70757b";
+
+  context.fillText(
+    "Minutes",
+    0,
+    0
+  );
+
+  context.restore();
+
+  context.textAlign = "center";
+
+  context.textBaseline = "top";
+
+  keys.forEach((key, index) => {
+
+    const x =
+      padding.left +
+      (
+        keys.length === 1
+          ? plotWidth / 2
+          : plotWidth *
+            index /
+            (keys.length - 1)
+      );
+
+    const date =
+      dateFromKey(key);
+
+    context.fillStyle =
+      "#70757b";
+
+    context.fillText(
+      date.toLocaleDateString(
+        "en-IN",
+        {
+          weekday: "short",
+          day: "numeric"
+        }
+      ),
+      x,
+      height -
+        padding.bottom +
+        13
+    );
+  });
+
+  context.strokeStyle = "#15803d";
+
+  context.lineWidth = 3;
+
+  let segmentOpen = false;
+
+  values.forEach((value, index) => {
+
+    if (
+      value === null ||
+      value <= 0
+    ) {
+
+      segmentOpen = false;
+
+      return;
+    }
+
+    const x =
+      padding.left +
+      (
+        keys.length === 1
+          ? plotWidth / 2
+          : plotWidth *
+            index /
+            (keys.length - 1)
+      );
+
+    const y =
+      padding.top +
+      plotHeight -
+      (
+        value /
+        maximum
+      ) *
+      plotHeight;
+
+    if (!segmentOpen) {
+
+      context.beginPath();
+
+      context.moveTo(x, y);
+
+      segmentOpen = true;
+
+    } else {
+
+      context.lineTo(x, y);
+    }
+
+    context.stroke();
+  });
+
+  values.forEach((value, index) => {
+
+    if (
+      value === null ||
+      value <= 0
+    ) {
+      return;
+    }
+
+    const x =
+      padding.left +
+      (
+        keys.length === 1
+          ? plotWidth / 2
+          : plotWidth *
+            index /
+            (keys.length - 1)
+      );
+
+    const y =
+      padding.top +
+      plotHeight -
+      (
+        value /
+        maximum
+      ) *
+      plotHeight;
+
+    context.beginPath();
+
+    context.arc(
+      x,
+      y,
+      5,
+      0,
+      Math.PI * 2
+    );
+
+    context.fillStyle =
+      "#15803d";
+
+    context.fill();
+
+    context.beginPath();
+
+    context.arc(
+      x,
+      y,
+      8,
+      0,
+      Math.PI * 2
+    );
+
+    context.strokeStyle =
+      "#15803d";
+
+    context.lineWidth = 1;
+
+    context.stroke();
+  });
+}
+
+
+// =========================================================
+// STUDY TIME STORAGE
+// =========================================================
+
+function addStudySeconds(seconds) {
+
+  seconds =
+    Math.max(
+      0,
+      Math.round(seconds)
+    );
+
+  if (!seconds) return;
+
+  const date = todayKey();
+
+  data.studyByDate[date] =
+    getStudySeconds(date) +
+    seconds;
+
+  save();
+
+  updateMainUI();
+}
+
+
+// =========================================================
+// TIMER DISPLAY
+// =========================================================
+
+function updateTimerDisplay() {
+
+  let displayMs =
+    timer.elapsedMs;
+
+  if (timer.mode === "countdown") {
+
+    displayMs =
+      timer.countdownRemainingMs;
+  }
+
+  if (
+    timer.running &&
+    timer.startedAt !== null
+  ) {
+
+    const delta =
+      Date.now() -
+      timer.startedAt;
+
+    if (timer.mode === "countdown") {
+
+      displayMs =
+        Math.max(
+          0,
+          timer.countdownRemainingMs -
+          delta
+        );
+
+    } else {
+
+      displayMs =
+        timer.elapsedMs +
+        delta;
+    }
+  }
+
+  const second =
+    Math.floor(
+      displayMs / 1000
+    );
+
+  if (
+    second !==
+    timer.lastDisplaySecond
+  ) {
+
+    timer.lastDisplaySecond =
+      second;
+
+    if ($("timerDisplay")) {
+
+      $("timerDisplay").textContent =
+        formatClock(displayMs);
+    }
+  }
+}
+
+
+// =========================================================
+// TIMER STATE
+// =========================================================
+
+function updateTimerState() {
+
+  if (
+    !timer.running ||
+    timer.startedAt === null
+  ) {
+    return;
+  }
+
+  const now = Date.now();
+
+  const delta =
+    now -
+    timer.startedAt;
+
+  if (timer.mode === "stopwatch") {
+
+    timer.elapsedMs += delta;
+
+    timer.startedAt = now;
+
+  } else {
+
+    timer.countdownRemainingMs -=
+      delta;
+
+    timer.startedAt = now;
+
+    timer.elapsedMs =
+      timer.countdownDurationMs -
+      timer.countdownRemainingMs;
+
+    if (
+      timer.countdownRemainingMs <= 0
+    ) {
+
+      timer.countdownRemainingMs = 0;
+
+      timer.elapsedMs =
+        timer.countdownDurationMs;
+
+      timer.running = false;
+
+      timer.startedAt = null;
+
+      saveTimerStudyDelta();
+
+      timer.savedMs = 0;
+
+      updateTimerDisplay();
+
+      showTimerEnded();
+
+      return;
+    }
+  }
+
+  saveTimerStudyDelta(false);
+
+  updateTimerDisplay();
+}
+
+
+// =========================================================
+// SAVE TIMER STUDY DELTA
+// =========================================================
+
+function saveTimerStudyDelta(resetSaved = false) {
+
+  const current =
+    timer.elapsedMs;
+
+  const unsaved =
+    Math.max(
+      0,
+      current - timer.savedMs
+    );
+
+  if (unsaved >= 1000) {
+
+    addStudySeconds(
+      Math.floor(
+        unsaved / 1000
+      )
+    );
+  }
+
+  timer.savedMs =
+    resetSaved
+      ? 0
+      : current;
+}
+
+
+// =========================================================
+// TIMER MODE
+// =========================================================
+
+function selectTimerMode(mode) {
+
+  if (timer.running) {
+
+    updateTimerState();
+
+    timer.running = false;
+
+    timer.startedAt = null;
+
+    saveTimerStudyDelta();
+  }
+
+  timer.mode = mode;
+
+  timer.elapsedMs = 0;
+
+  timer.savedMs = 0;
+
+  timer.countdownDurationMs = 0;
+
+  timer.countdownRemainingMs = 0;
+
+  timer.lastDisplaySecond = -1;
+
+  $("stopwatchMode")
+    ?.classList.toggle(
+      "active",
+      mode === "stopwatch"
+    );
+
+  $("countdownMode")
+    ?.classList.toggle(
+      "active",
+      mode === "countdown"
+    );
+
+  $("countdownInput")
+    ?.classList.toggle(
+      "hidden",
+      mode !== "countdown"
+    );
+
+  if ($("timerDisplay")) {
+
+    $("timerDisplay").textContent =
+      "00:00:00";
+  }
+}
+
+
+// =========================================================
+// START STUDY TIMER
+// =========================================================
+
+function startStudyTimer() {
+
+  if (timer.running) return;
+
+  if (timer.mode === "countdown") {
+
+    if (
+      timer.countdownRemainingMs <= 0
+    ) {
+
+      const minutes =
+        Number(
+          $("countdownMinutes")?.value || 0
+        );
+
+      const seconds =
+        Number(
+          $("countdownSeconds")?.value || 0
+        );
+
+      if (
+        !Number.isFinite(minutes) ||
+        !Number.isFinite(seconds) ||
+        minutes < 0 ||
+        seconds < 0 ||
+        seconds > 59 ||
+        (minutes === 0 && seconds === 0)
+      ) {
+
+        alert(
+          "Enter a valid countdown time."
+        );
+
+        return;
+      }
+
+      timer.countdownDurationMs =
+        (
+          minutes * 60 +
+          seconds
+        ) * 1000;
+
+      timer.countdownRemainingMs =
+        timer.countdownDurationMs;
+
+      timer.elapsedMs = 0;
+
+      timer.savedMs = 0;
+    }
+  }
+
+  timer.running = true;
+
+  timer.startedAt = Date.now();
+
+  timer.lastDisplaySecond = -1;
+
+  updateTimerDisplay();
+}
+
+
+// =========================================================
+// PAUSE TIMER
+// =========================================================
+
+function pauseStudyTimer() {
+
+  if (!timer.running) return;
+
+  updateTimerState();
+
+  if (timer.running) {
+
+    timer.running = false;
+
+    timer.startedAt = null;
+  }
+
+  saveTimerStudyDelta();
+
+  updateTimerDisplay();
+
+  updateMainUI();
+}
+
+
+// =========================================================
+// RESET TIMER
+// =========================================================
+
+function resetStudyTimer() {
+
+  if (timer.running) {
+    updateTimerState();
+  }
+
+  saveTimerStudyDelta();
+
+  timer.running = false;
+
+  timer.startedAt = null;
+
+  timer.elapsedMs = 0;
+
+  timer.savedMs = 0;
+
+  timer.countdownDurationMs = 0;
+
+  timer.countdownRemainingMs = 0;
+
+  timer.lastDisplaySecond = -1;
+
+  if ($("timerDisplay")) {
+
+    $("timerDisplay").textContent =
+      "00:00:00";
+  }
+
+  updateMainUI();
+}
+
+
+// =========================================================
+// MANUAL STUDY TIME
+// =========================================================
+
+function saveManualStudyTime() {
+
+  const minutes =
+    Number(
+      $("manualStudyTime")?.value || 0
+    );
+
+  if (
+    !Number.isFinite(minutes) ||
+    minutes <= 0
+  ) {
+
+    alert(
+      "Enter a study time greater than 0 minutes."
+    );
+
+    return;
+  }
+
+  addStudySeconds(
+    Math.round(minutes * 60)
+  );
+
+  $("manualStudyTime").value = "";
+}
+
+
+// =========================================================
+// TIMER END
+// =========================================================
+
+function showTimerEnded() {
+
+  $("timerEndedReminder")
+    ?.classList.remove("hidden");
+
+  playAlarm();
+
+  sendNotification(
+    "Timer Ended",
+    "Your countdown timer has reached 00:00."
+  );
+}
+
+
+function playAlarm() {
+
+  try {
+
+    const AudioContextClass =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    if (!AudioContextClass) return;
+
+    const context =
+      new AudioContextClass();
+
+    const oscillator =
+      context.createOscillator();
+
+    const gain =
+      context.createGain();
+
+    oscillator.frequency.value = 800;
+
+    gain.gain.setValueAtTime(
+      0.15,
+      context.currentTime
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.001,
+      context.currentTime + 0.8
+    );
+
+    oscillator.connect(gain);
+
+    gain.connect(
+      context.destination
+    );
+
+    oscillator.start();
+
+    oscillator.stop(
+      context.currentTime + 0.8
+    );
+
+  } catch (_) {}
+}
+
+
+// =========================================================
+// NOTIFICATIONS
+// =========================================================
+
+async function enableNotifications() {
+
+  if (!("Notification" in window)) {
+
+    alert(
+      "This browser does not support notifications."
+    );
+
+    return;
+  }
+
+  try {
+
+    const permission =
+      await Notification.requestPermission();
+
+    if (permission === "granted") {
+
+      updateNotificationButton();
+
+      sendNotification(
+        "Daily Target",
+        "Notifications are enabled."
+      );
+
+    } else if (permission === "denied") {
+
+      alert(
+        "Notifications are blocked for this site. Open Chrome site settings and allow Notifications for this website."
+      );
+
+      updateNotificationButton();
+
+    } else {
+
+      alert(
+        "Notification permission was not granted."
+      );
+    }
+
+  } catch (error) {
+
+    console.error(error);
+
+    alert(
+      "Notification permission could not be requested in this browser."
+    );
+  }
+}
+
+
+function updateNotificationButton() {
+
+  const button =
+    $("notificationBtn");
+
+  if (!button) return;
+
+  if (!("Notification" in window)) {
+
+    button.textContent =
+      "Notifications Not Supported";
+
+    return;
+  }
+
+  button.textContent =
+    Notification.permission === "granted"
+      ? "✓ Notifications Enabled"
+      : "Enable Notifications";
+}
+
+
+function sendNotification(title, body) {
+
+  if (
+    !("Notification" in window) ||
+    Notification.permission !== "granted"
+  ) {
+    return;
+  }
+
+  try {
+
+    new Notification(
+      title,
+      { body }
+    );
+
+  } catch (error) {
+
+    console.log(
+      "Notification unavailable",
+      error
+    );
+  }
+}
+
+
+// =========================================================
+// SCHEDULED TASK NOTIFICATIONS
+// =========================================================
+
+function notificationKey(
+  type,
+  id,
+  date,
+  time
+) {
+
+  return `${type}_${id}_${date}_${time}`;
+}
+
+
+function checkScheduledNotifications() {
+
+  const now = new Date();
+
+  const date = todayKey();
+
+  const time =
+    `${String(now.getHours()).padStart(2, "0")}:${String(
+      now.getMinutes()
+    ).padStart(2, "0")}`;
+
+  const tasks = getTasks(date);
+
+  tasks.forEach(task => {
+
+    if (
+      !task.completed &&
+      task.time === time
+    ) {
+
+      const key =
+        notificationKey(
+          "task",
+          task.id,
+          date,
+          time
+        );
+
+      if (!data.notified[key]) {
+
+        data.notified[key] = true;
+
+        save();
+
+        showScheduledReminder(
+          task.id,
+          task.name,
+          task.time
+        );
+      }
+    }
+  });
+
+  data.fixedTargets.forEach(target => {
+
+    if (
+      !target.completed &&
+      target.time === time
+    ) {
+
+      const key =
+        notificationKey(
+          "fixed",
+          target.id,
+          date,
+          time
+        );
+
+      if (!data.notified[key]) {
+
+        data.notified[key] = true;
+
+        save();
+
+        showScheduledReminder(
+          target.id,
+          target.name,
+          target.time
+        );
+      }
+    }
+  });
+}
+
+
+function showScheduledReminder(
+  id,
+  name,
+  time
+) {
+
+  if ($("reminderText")) {
+
+    $("reminderText").textContent =
+      `Time to complete the task: ${name} (${formatTime(time)}).`;
+  }
+
+  $("reminder")
+    ?.classList.remove("hidden");
+
+  playAlarm();
+
+  sendNotification(
+    "Time to complete the task",
+    `${name} — ${formatTime(time)}`
+  );
+
+  if (reminderTimer) {
+    clearTimeout(reminderTimer);
+  }
+
+  reminderTimer = null;
+
+  $("reminderComplete")
+    ?.setAttribute(
+      "data-reminder-id",
+      id
+    );
+}
+
+
+// =========================================================
+// REMINDER CONTROLS
+// =========================================================
+
+function stopReminderForTask(id) {
+
+  if (
+    $("reminderComplete")
+      ?.getAttribute("data-reminder-id") === id
+  ) {
+
+    $("reminder")
+      ?.classList.add("hidden");
+
+    if (reminderTimer) {
+      clearTimeout(reminderTimer);
+    }
+
+    reminderTimer = null;
+  }
+}
+
+
+function completeReminderTarget() {
+
+  const id =
+    $("reminderComplete")
+      ?.getAttribute("data-reminder-id");
+
+  if (!id) return;
+
+  const date = todayKey();
+
+  const task =
+    getTasks(date).find(
+      item => item.id === id
+    );
+
+  if (task) {
+
+    task.completed = true;
+
+    setTasks(
+      date,
+      getTasks(date)
+    );
+
+  } else {
+
+    const fixed =
+      data.fixedTargets.find(
+        item => item.id === id
+      );
+
+    if (fixed) {
+
+      fixed.completed = true;
+
+      fixed.completedDate =
+        todayKey();
+    }
+  }
+
+  updateDayCompletion(date);
+
+  $("reminder")
+    ?.classList.add("hidden");
+
+  updateMainUI();
+
+  renderRegularTasks();
+
+  renderFixedTargets();
+}
+
+
+function remindLater() {
+
+  $("reminder")
+    ?.classList.add("hidden");
+
+  const id =
+    $("reminderComplete")
+      ?.getAttribute("data-reminder-id");
+
+  if (!id) return;
+
+  if (reminderTimer) {
+    clearTimeout(reminderTimer);
+  }
+
+  reminderTimer =
+    setTimeout(() => {
+
+      const task =
+        getTasks(todayKey()).find(
+          item => item.id === id
+        );
+
+      const fixed =
+        data.fixedTargets.find(
+          item => item.id === id
+        );
+
+      const target =
+        task || fixed;
+
+      if (
+        target &&
+        !target.completed
+      ) {
+
+        showScheduledReminder(
+          id,
+          target.name,
+          target.time
+        );
+      }
+
+    }, 60 * 60 * 1000);
+}
+
+
+// =========================================================
+// EVENT BINDING
+// =========================================================
+
+function bindEvents() {
+
+  $("openRegularTarget")
+    ?.addEventListener(
+      "click",
+      openRegularTasks
+    );
+
+  $("editDaily")
+    ?.addEventListener(
+      "click",
+      openPlanner
+    );
+
+  $("completeAllRegular")
+    ?.addEventListener(
+      "click",
+      completeAllRegular
+    );
+
+  $("completeAllRegularFromView")
+    ?.addEventListener(
+      "click",
+      completeAllRegular
+    );
+
+  $("closeRegularTasks")
+    ?.addEventListener(
+      "click",
+      closeAllViews
+    );
+
+  $("closeRegularPlanner")
+    ?.addEventListener(
+      "click",
+      closeAllViews
+    );
+
+  $("closeFixedTargets")
+    ?.addEventListener(
+      "click",
+      closeAllViews
+    );
+
+  $("closeWeeklyStats")
+    ?.addEventListener(
+      "click",
+      closeAllViews
+    );
+
+  $("addTaskBtn")
+    ?.addEventListener(
+      "click",
+      () => openTaskModal(todayKey())
+    );
+
+  $("addTaskFromPlanner")
+    ?.addEventListener(
+      "click",
+      () => openTaskModal(plannerDate)
+    );
+
+  $("saveTaskBtn")
+    ?.addEventListener(
+      "click",
+      saveTask
+    );
+
+  $("closeTaskModal")
+    ?.addEventListener(
+      "click",
+      closeTaskModal
+    );
+
+  $("plannerDate")
+    ?.addEventListener(
+      "change",
+      renderPlanner
+    );
+
+  $("saveRegularPlan")
+    ?.addEventListener(
+      "click",
+      () => {
+
+        save();
+
+        updateMainUI();
+
+        closeAllViews();
+      }
+    );
+
+  $("openFixedTargets")
+    ?.addEventListener(
+      "click",
+      openFixedTargets
+    );
+
+  $("addFixedTarget")
+    ?.addEventListener(
+      "click",
+      () => openTargetModal("fixed")
+    );
+
+  $("saveTarget")
+    ?.addEventListener(
+      "click",
+      saveTarget
+    );
+
+  $("closeModal")
+    ?.addEventListener(
+      "click",
+      closeModal
+    );
+
+  $("openWeeklyStats")
+    ?.addEventListener(
+      "click",
+      openWeeklyStats
+    );
+
+  $("stopwatchMode")
+    ?.addEventListener(
+      "click",
+      () => selectTimerMode("stopwatch")
+    );
+
+  $("countdownMode")
+    ?.addEventListener(
+      "click",
+      () => selectTimerMode("countdown")
+    );
+
+  $("startStudyTimer")
+    ?.addEventListener(
+      "click",
+      startStudyTimer
+    );
+
+  $("pauseStudyTimer")
+    ?.addEventListener(
+      "click",
+      pauseStudyTimer
+    );
+
+  $("resetStudyTimer")
+    ?.addEventListener(
+      "click",
+      resetStudyTimer
+    );
+
+  $("saveManualStudyTime")
+    ?.addEventListener(
+      "click",
+      saveManualStudyTime
+    );
+
+  $("notificationBtn")
+    ?.addEventListener(
+      "click",
+      enableNotifications
+    );
+
+  $("reminderComplete")
+    ?.addEventListener(
+      "click",
+      completeReminderTarget
+    );
+
+  $("remindLater")
+    ?.addEventListener(
+      "click",
+      remindLater
+    );
+
+  $("closeTimerEndedReminder")
+    ?.addEventListener(
+      "click",
+      () =>
+        $("timerEndedReminder")
+          ?.classList.add("hidden")
+    );
+
+  document.addEventListener(
+    "visibilitychange",
+    () => {
+
+      if (!document.hidden) {
+
+        updateMainUI();
+
+        checkScheduledNotifications();
+
+        updateTimerDisplay();
+      }
+    }
+  );
+
+  window.addEventListener(
+    "resize",
+    () => {
+
+      if (
+        !$("weeklyStatsView")
+          ?.classList.contains("hidden")
+      ) {
+
+        renderStudyChart(
+          getWeekKeys()
+        );
+      }
+    }
+  );
+}
+
+
+// =========================================================
+// CLEAN OLD NOTIFICATION RECORDS
+// =========================================================
+
+function cleanOldNotificationRecords() {
+
+  const cutoff = new Date();
+
+  cutoff.setDate(
+    cutoff.getDate() - 14
+  );
+
+  for (
+    const key of Object.keys(data.notified)
+  ) {
+
+    const parts = key.split("_");
+
+    const date =
+      parts[parts.length - 2];
+
+    if (
+      /^\d{4}-\d{2}-\d{2}$/.test(date) &&
+      dateFromKey(date) < cutoff
+    ) {
+
+      delete data.notified[key];
+    }
+  }
+}
+
+
+// =========================================================
+// START APPLICATION
+// =========================================================
+
+function init() {
+
+  cleanOldNotificationRecords();
+
+  updateStreak();
+
+  save();
+
+  bindEvents();
+
+  selectTimerMode("stopwatch");
+
+  updateMainUI();
+
+  checkScheduledNotifications();
+
+  setInterval(
+    () => {
+      updateTimerState();
+    },
+    250
+  );
+
+  notificationCheckTimer =
+    setInterval(
+      checkScheduledNotifications,
+      1000
+    );
+
+  setInterval(
+    updateMainUI,
+    60000
+  );
+}
+
+
+document.addEventListener(
+  "DOMContentLoaded",
+  init
+);
